@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<title>Scommetti Pronostici</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+/* Layout: una colonna stile schedina — barra campionati, migliori giocate, poi le partite giornata per giornata */
+:root{
+  --bg:#F2F5F1; --surface:#FFFFFF; --ink:#13251B; --muted:#5D6E63; --line:#D7DFD8;
+  --pitch:#1F5E3B; --pitch-soft:#E3EEE6; --amber:#B86A12; --amber-soft:#F7EBDA;
+  --good:#1E7A45; --warn:#A8620B; --bad:#B23A30;
+  --p1:#1F5E3B; --px:#8C9A90; --p2:#B86A12;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1813; --surface:#16231B; --ink:#E6EEE8; --muted:#97A89C; --line:#2A3A30;
+  --pitch:#5DBB85; --pitch-soft:#1C3326; --amber:#E9A24E; --amber-soft:#33261A;
+  --good:#5DBB85; --warn:#E9A24E; --bad:#E7786D; --p1:#5DBB85; --px:#6F8076; --p2:#E9A24E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1813; --surface:#16231B; --ink:#E6EEE8; --muted:#97A89C; --line:#2A3A30;
+  --pitch:#5DBB85; --pitch-soft:#1C3326; --amber:#E9A24E; --amber-soft:#33261A;
+  --good:#5DBB85; --warn:#E9A24E; --bad:#E7786D; --p1:#5DBB85; --px:#6F8076; --p2:#E9A24E; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 48px;display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--display);font-weight:700;font-size:2.2rem;line-height:1;letter-spacing:.01em;margin:0;text-transform:uppercase}
+h1 span{color:var(--amber)}
+h2{font-family:var(--display);font-weight:700;font-size:1.25rem;text-transform:uppercase;letter-spacing:.04em;margin:0}
+.sub{color:var(--muted);margin:4px 0 0;font-size:.92rem}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.tab{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 .9rem var(--body);padding:8px 13px;border-radius:999px;cursor:pointer}
+.tab[aria-pressed="true"]{background:var(--pitch);border-color:var(--pitch);color:var(--bg)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.status{font-size:.85rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.status .warn{color:var(--warn)}
+.status .err{color:var(--bad)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,input[type=text],input[type=password]{font:500 .9rem var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.btn{font:600 .9rem var(--body);border:1px solid var(--pitch);background:transparent;color:var(--pitch);border-radius:8px;padding:7px 12px;cursor:pointer}
+.btn.solid{background:var(--pitch);color:var(--bg)}
+details.settings{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+details.settings summary{cursor:pointer;font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.field label{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.field input{width:100%}
+.hint{font-size:.82rem;color:var(--muted);margin:2px 0 0}
+.hint a{color:var(--pitch)}
+.picks{background:var(--pitch);color:var(--bg);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.picks h2{color:var(--bg)}
+.picks .row{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--bg) 22%,transparent)}
+.picks .row:first-of-type{border-top:0;padding-top:0}
+.picks .m{font-weight:600;min-width:0}
+.picks .d{font-size:.82rem;opacity:.8}
+.picks .ev{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.picks .empty{opacity:.85;font-size:.9rem}
+.day{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-size:.95rem;margin:6px 0 -6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.teams .t{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.teams .t.r{text-align:right}
+.teams .time{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.prob{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line)}
+.prob i{display:block;height:100%}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cell{border:1px solid var(--line);border-radius:9px;padding:7px 8px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cell.best{border-color:var(--amber);background:var(--amber-soft)}
+.cell .k{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);font-weight:600;letter-spacing:.04em}
+.cell .p{font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.cell input{width:100%;font-family:var(--mono);font-variant-numeric:tabular-nums;padding:5px 7px}
+.cell .v{font-size:.78rem;font-family:var(--mono)}
+.v.pos{color:var(--good)} .v.neg{color:var(--muted)}
+.more{font-size:.85rem}
+.more summary{cursor:pointer;color:var(--pitch);font-weight:600}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px 14px;margin-top:8px}
+.kv div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding-bottom:3px}
+.kv b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.na{font-size:.85rem;color:var(--warn)}
+.how{font-size:.88rem;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.how p{margin:6px 0 0;max-width:65ch}
+.stake{font-family:var(--mono);font-size:.78rem;color:var(--amber);font-weight:500}
+.lg{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sum{font-size:.85rem;opacity:.9;border-top:1px solid color-mix(in srgb,var(--bg) 22%,transparent);padding-top:10px}
+input.num{width:7.5em;font-family:var(--mono)}
+.badge{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:999px;background:var(--pitch-soft);color:var(--pitch)}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .2s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Scommetti <span>Pronostici</span></h1>
+    <p class="sub">Probabilità stimate dai risultati ufficiali, confrontate con le quote dei bookmaker.</p>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Campionato"></nav>
+
+  <div class="status" id="status">Caricamento dati…</div>
+
+  <details class="settings" id="settings">
+    <summary>Fonti dati e chiavi</summary>
+    <div class="field">
+      <label for="kOdds">Chiave quote (The Odds API)</label>
+      <input type="password" id="kOdds" autocomplete="off" placeholder="Incolla la chiave gratuita">
+      <p class="hint">Quote reali dei bookmaker per 1X2 e Over/Under. Registrazione gratuita su <a href="https://the-odds-api.com/" target="_blank" rel="noopener">the-odds-api.com</a> (500 richieste al mese). Senza chiave puoi scrivere le quote a mano copiandole dal sito del tuo bookmaker.</p>
+    </div>
+    <div class="field">
+      <label for="kFd">Chiave risultati (football-data.org)</label>
+      <input type="password" id="kFd" autocomplete="off" placeholder="Facoltativa">
+      <p class="hint">Risultati aggiornati di giornata in giornata. Chiave gratuita su <a href="https://www.football-data.org/client/register" target="_blank" rel="noopener">football-data.org</a>. Senza chiave l'app usa l'archivio openfootball, che può restare indietro di qualche giornata.</p>
+    </div>
+    <div class="bar" style="margin-top:12px">
+      <button class="btn solid" id="save">Salva e ricarica</button>
+      <span class="hint">Le chiavi restano solo in questo browser.</span>
+    </div>
+  </details>
+
+  <div class="bar">
+    <label for="bank" class="hint" style="margin:0">Cassa</label>
+    <input type="text" inputmode="numeric" id="bank" class="num" value="1000">
+    <label for="style" class="hint" style="margin:0">Prudenza</label>
+    <select id="style">
+      <option value="p">Prudente</option>
+      <option value="e" selected>Equilibrato</option>
+      <option value="a">Aggressivo</option>
+    </select>
+    <label for="book" class="hint" style="margin:0">Quote</label>
+    <select id="book"><option value="median">Mediana bookmaker</option></select>
+  </div>
+
+  <section class="picks" id="picks" aria-live="polite"><h2>Migliori giocate</h2><div class="empty">In attesa dei dati…</div></section>
+
+  <section id="list" style="display:flex;flex-direction:column;gap:12px"></section>
+
+  <section class="how">
+    <h2 style="font-size:1rem">Come leggere i numeri</h2>
+    <p><b>Prob.</b> è la stima dell'app: unisce un modello di Poisson (forza in attacco e in difesa di ogni squadra, vantaggio del campo, partite recenti contano di più) con le probabilità implicite nelle quote, depurate dal margine del bookmaker.</p>
+    <p><b>Resa</b> è probabilità × quota: quanto torna in media per ogni punto puntato. Sopra 1 la giocata è a tuo favore, sotto 1 nel lungo periodo perdi, anche se sembra sicura. Le <b>migliori giocate</b> mostrano solo partite con resa sopra la soglia scelta, una sola giocata per partita.</p>
+    <p><b>Puntata</b> segue il criterio di Kelly frazionato: più grande è il vantaggio, più punti; mai oltre il 5% della cassa su una partita e mai oltre il 25% in totale. Prudente usa ¼ di Kelly e vuole almeno il 5% di margine, Equilibrato ⅓ e il 3%, Aggressivo ½ e il 1,5%. Saltare le partite senza vantaggio è parte della strategia.</p>
+    <p>Nessun modello indovina il calcio con certezza: infortuni, turnover e meteo non entrano nei dati.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+const LEAGUES=[
+ {id:'it',name:'Serie A',of:'it.1',fd:'SA',odds:'soccer_italy_serie_a'},
+ {id:'en',name:'Premier League',of:'en.1',fd:'PL',odds:'soccer_epl'},
+ {id:'es',name:'LaLiga',of:'es.1',fd:'PD',odds:'soccer_spain_la_liga'},
+ {id:'de',name:'Bundesliga',of:'de.1',fd:'BL1',odds:'soccer_germany_bundesliga'},
+ {id:'fr',name:'Ligue 1',of:'fr.1',fd:'FL1',odds:'soccer_france_ligue_one'}
+];
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const $=s=>document.querySelector(s);
+const state={league:ls.get('lg','it'),style:ls.get('style','e'),book:'median',sets:[],cache:{}};
+if(!['p','e','a'].includes(state.style))state.style='e';
+$('#bank').value=ls.get('bank',1000);
+const STYLE={p:{edge:0.05,kf:0.25},e:{edge:0.03,kf:1/3},a:{edge:0.015,kf:0.5}};
+$('#kOdds').value=ls.get('kOdds','');$('#kFd').value=ls.get('kFd','');$('#style').value=state.style;
+
+/* ---------- date / stagione ---------- */
+const now=new Date();
+const curStart=now.getMonth()>=6?now.getFullYear():now.getFullYear()-1; // 2026 per la stagione 2026/27
+const sName=y=>y+'-'+String((y+1)%100).padStart(2,'0');
+
+/* ---------- normalizzazione nomi ---------- */
+const DROP=new Set(['fc','cf','ac','as','ss','us','ssc','afc','calcio','club','cd','rcd','sc','sv','vfb','vfl','tsg','fsv','ogc','rc','sd','ud','ca','de','la','1','1899','1907','1909','1913','1846','1848','1904','1910','1919','1920','04','05','09','1860','sad','balompie','football','hotspur','and','albion','hove','stade','olympique','racing','saint','st','germain','sco','aj','fk','bc','tsv','ev','hsv']);
+const ALIAS={internazionale:'inter',milano:'milan',munich:'munchen',muenchen:'munchen',koln:'koln',cologne:'koln',koeln:'koln',utd:'united',man:'manchester',wolves:'wolverhampton',spurs:'tottenham',psg:'paris',gladbach:'monchengladbach',moenchengladbach:'monchengladbach',hellas:'verona',bilbao:'athletic',betis:'betis',atletico:'atletico',atl:'atletico',nottm:'nottingham',sociedad:'sociedad',alaves:'alaves',leverkusen:'leverkusen',frankfurt:'frankfurt',eintracht:'frankfurt',marseille:'marseille',lyon:'lyon',lyonnais:'lyon',brest:'brest',rennais:'rennes',nice:'nice'};
+function norm(s){
+  const t=s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean)
+    .map(w=>ALIAS[w]||w).filter(w=>!DROP.has(w));
+  return [...new Set(t)];
+}
+function matchTeam(name,teams){
+  const a=norm(name);let best=null,bs=0;
+  for(const t of teams){const b=norm(t);const inter=a.filter(x=>b.includes(x)).length;if(!inter)continue;
+    const s=inter/(a.length+b.length-inter)+(a.join()==b.join()?1:0);if(s>bs){bs=s;best=t}}
+  return bs>=0.34?best:null;
+}
+
+/* ---------- caricamento dati ---------- */
+async function getJSON(url,opt){
+  const nat=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.net;
+  if(nat){const r=await nat.postMessage({url,headers:(opt&&opt.headers)||{}});if(r.status<200||r.status>=300)throw new Error('HTTP '+r.status);return JSON.parse(r.body)}
+  const r=await fetch(url,opt);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+async function loadOpenfootball(L){
+  const res=[],fix=[];let lastDate=null;
+  for(const y of [curStart-1,curStart]){
+    let d;try{d=await getJSON(`https://raw.githubusercontent.com/openfootball/football.json/master/${sName(y)}/${L.of}.json`)}catch(e){continue}
+    for(const m of d.matches||[]){if(!m||!m.team1)continue;
+      const dt=new Date(m.date+'T'+(m.time||'15:00'));
+      const ft=m.score&&m.score.ft;
+      if(ft&&ft.length==2){res.push({h:m.team1,a:m.team2,hg:ft[0],ag:ft[1],d:dt});if(!lastDate||dt>lastDate)lastDate=dt}
+      else if(y==curStart&&dt>=new Date(now.getTime()-3*3600e3))fix.push({h:m.team1,a:m.team2,d:dt})}
+  }
+  return {res,fix,src:'openfootball',lastDate};
+}
+async function loadFD(L,key){
+  const res=[],fix=[];let lastDate=null;
+  for(const y of [curStart-1,curStart]){
+    let d;try{d=await getJSON(`https://api.football-data.org/v4/competitions/${L.fd}/matches?season=${y}`,{headers:{'X-Auth-Token':key}})}catch(e){if(y==curStart)throw e;continue}
+    for(const m of d.matches||[]){const dt=new Date(m.utcDate);const h=m.homeTeam&&m.homeTeam.name,a=m.awayTeam&&m.awayTeam.name;if(!h||!a)continue;
+      const ft=m.score&&m.score.fullTime;
+      if(m.status==='FINISHED'&&ft&&ft.home!=null){res.push({h,a,hg:ft.home,ag:ft.away,d:dt});if(!lastDate||dt>lastDate)lastDate=dt}
+      else if(['SCHEDULED','TIMED'].includes(m.status))fix.push({h,a,d:dt})}
+  }
+  return {res,fix,src:'football-data.org',lastDate};
+}
+async function loadOdds(L,key){
+  const ck='odds_'+L.id,c=ls.get(ck,null);
+  if(c&&Date.now()-c.t<30*60e3)return c.v;
+  const url=`https://api.the-odds-api.com/v4/sports/${L.odds}/odds?regions=eu&markets=h2h,totals&oddsFormat=decimal&apiKey=${encodeURIComponent(key)}`;
+  const v=await getJSON(url);ls.set(ck,{t:Date.now(),v});return v;
+}
+
+/* ---------- modello (Poisson con decadimento e correzione Dixon-Coles) ---------- */
+function fit(res){
+  const XI=0.0045,K=3; // emivita ~5 mesi; K = partite "fittizie" di regolarizzazione
+  const teams=[...new Set(res.flatMap(m=>[m.h,m.a]))];
+  const cur=new Set(res.filter(m=>m.d>=new Date(curStart,6,1)).flatMap(m=>[m.h,m.a]));
+  const prev=new Set(res.filter(m=>m.d<new Date(curStart,6,1)).flatMap(m=>[m.h,m.a]));
+  const ms=res.map(m=>({...m,w:Math.exp(-XI*Math.max(0,(now-m.d)/864e5))}));
+  const A={},D={},a0={},d0={};
+  for(const t of teams){A[t]=1;D[t]=1.3;const promoted=cur.has(t)&&!prev.has(t)&&prev.size>0;a0[t]=promoted?0.82:1;d0[t]=promoted?1.18:1}
+  let g=1.25;
+  for(let it=0;it<80;it++){
+    const nA={},dA={},nD={},dD={};for(const t of teams){nA[t]=dA[t]=nD[t]=dD[t]=0}
+    for(const m of ms){nA[m.h]+=m.w*m.hg;dA[m.h]+=m.w*D[m.a]*g;nA[m.a]+=m.w*m.ag;dA[m.a]+=m.w*D[m.h]}
+    const dbar=teams.reduce((s,t)=>s+D[t],0)/teams.length,u=dbar*(1+g)/2;
+    for(const t of teams)A[t]=(nA[t]+K*a0[t]*u)/(dA[t]+K*u);
+    for(const m of ms){nD[m.a]+=m.w*m.hg;dD[m.a]+=m.w*A[m.h]*g;nD[m.h]+=m.w*m.ag;dD[m.h]+=m.w*A[m.a]}
+    const v=(1+g)/2;
+    for(const t of teams)D[t]=(nD[t]+K*d0[t]*dbar*v)/(dD[t]+K*v);
+    let hn=0,hd=0;for(const m of ms){hn+=m.w*m.hg;hd+=m.w*A[m.h]*D[m.a]}g=hn/hd;
+    const am=teams.reduce((s,t)=>s+A[t],0)/teams.length;for(const t of teams){A[t]/=am;D[t]*=am}
+  }
+  const n={};for(const m of res){n[m.h]=(n[m.h]||0)+1;n[m.a]=(n[m.a]||0)+1}
+  return {A,D,g,teams,n};
+}
+const fact=[1];for(let i=1;i<12;i++)fact[i]=fact[i-1]*i;
+const pois=(k,l)=>Math.exp(-l)*Math.pow(l,k)/fact[k];
+function predict(M,h,a){
+  if(!(h in M.A)||!(a in M.A))return null;
+  const lh=M.A[h]*M.D[a]*M.g,la=M.A[a]*M.D[h],rho=-0.08,N=10;
+  let p1=0,px=0,p2=0,ov=0,gg=0,tot=0,best={p:0};
+  for(let i=0;i<=N;i++)for(let j=0;j<=N;j++){
+    let p=pois(i,lh)*pois(j,la);
+    if(i==0&&j==0)p*=1-lh*la*rho;else if(i==0&&j==1)p*=1+lh*rho;else if(i==1&&j==0)p*=1+la*rho;else if(i==1&&j==1)p*=1-rho;
+    tot+=p;if(i>j)p1+=p;else if(i==j)px+=p;else p2+=p;if(i+j>2)ov+=p;if(i>0&&j>0)gg+=p;if(p>best.p)best={p,s:i+'-'+j};
+  }
+  return {lh,la,p1:p1/tot,px:px/tot,p2:p2/tot,ov:ov/tot,un:1-ov/tot,gg:gg/tot,ng:1-gg/tot,score:best.s,scoreP:best.p/tot};
+}
+
+/* ---------- quote ---------- */
+const med=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+function oddsFor(ev,book){
+  const pick=b=>book==='median'||b.key===book;const o={'1':[],'X':[],'2':[],O:[],U:[]};
+  for(const b of ev.bookmakers||[]){if(!pick(b))continue;
+    for(const mk of b.markets||[]){
+      if(mk.key==='h2h')for(const x of mk.outcomes){if(x.name===ev.home_team)o['1'].push(x.price);else if(x.name===ev.away_team)o['2'].push(x.price);else o.X.push(x.price)}
+      if(mk.key==='totals')for(const x of mk.outcomes){if(x.point!==2.5)continue;if(x.name==='Over')o.O.push(x.price);else o.U.push(x.price)}
+    }}
+  const r={};for(const k in o)r[k]=med(o[k]);return r;
+}
+
+/* ---------- stato e rendering ---------- */
+function tabs(){
+  $('#tabs').innerHTML=`<button class="tab" aria-pressed="${state.league==='all'}" data-id="all">Tutti</button>`+LEAGUES.map(L=>`<button class="tab" aria-pressed="${L.id===state.league}" data-id="${L.id}">${L.name}</button>`).join('');
+}
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;state.league=b.dataset.id;ls.set('lg',state.league);tabs();load()});
+$('#style').addEventListener('change',e=>{state.style=e.target.value;ls.set('style',state.style);render()});
+$('#book').addEventListener('change',e=>{state.book=e.target.value;render()});
+$('#bank').addEventListener('change',e=>{const v=parseFloat(e.target.value.replace(',','.'));ls.set('bank',v>0?v:1000);render()});
+$('#save').addEventListener('click',()=>{ls.set('kOdds',$('#kOdds').value.trim());ls.set('kFd',$('#kFd').value.trim());
+  LEAGUES.forEach(L=>{try{localStorage.removeItem('odds_'+L.id)}catch(e){}});state.cache={};$('#settings').open=false;load()});
+
+const fmtD=d=>d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+const fmtT=d=>d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+const pct=p=>p==null?'–':(p*100).toFixed(0)+'%';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function loadLeague(L){
+  if(state.cache[L.id])return state.cache[L.id];
+  const kFd=ls.get('kFd',''),kOdds=ls.get('kOdds','');
+  const notes=[];let base;
+  if(kFd){try{base=await loadFD(L,kFd)}catch(e){notes.push(`${L.name}: football-data.org non risponde (${esc(e.message)}), uso openfootball.`)}}
+  if(!base)base=await loadOpenfootball(L);
+  let odds=null;
+  if(kOdds){try{odds=await loadOdds(L,kOdds)}catch(e){notes.push(`${L.name}: quote non disponibili (${esc(e.message)}).`)}}
+  const M=fit(base.res);
+  let fixtures;
+  if(odds&&odds.length)fixtures=odds.map(ev=>({h:matchTeam(ev.home_team,M.teams),a:matchTeam(ev.away_team,M.teams),hn:ev.home_team,an:ev.away_team,d:new Date(ev.commence_time),ev}));
+  else fixtures=base.fix.sort((x,y)=>x.d-y.d).slice(0,20).map(f=>({...f,hn:f.h,an:f.a}));
+  const books=new Map();if(odds)for(const ev of odds)for(const b of ev.bookmakers||[])books.set(b.key,b.title);
+  return state.cache[L.id]={L,M,fixtures,base,odds,books,notes};
+}
+async function load(){
+  const ids=state.league==='all'?LEAGUES:[LEAGUES.find(x=>x.id===state.league)];
+  const st=$('#status');st.innerHTML='Caricamento '+(state.league==='all'?'di tutti i campionati':ids[0].name)+'…';
+  const sets=[],errs=[];
+  for(const L of ids){try{sets.push(await loadLeague(L))}catch(e){errs.push(L.name)}}
+  if(!sets.length){st.innerHTML='<span class="err">Impossibile scaricare i risultati. Controlla la connessione e riprova.</span>';return}
+  state.sets=sets;
+  const books=new Map();sets.forEach(x=>x.books.forEach((t,k)=>books.set(k,t)));
+  $('#book').innerHTML='<option value="median">Mediana bookmaker</option>'+[...books].sort((a,b)=>a[1].localeCompare(b[1])).map(([k,t])=>`<option value="${esc(k)}">${esc(t)}</option>`).join('');
+  if(!books.has(state.book))state.book='median';$('#book').value=state.book;
+  const last=sets.map(x=>x.base.lastDate).filter(Boolean).sort((a,b)=>a-b)[0];
+  const ld=last?last.toLocaleDateString('it-IT',{day:'numeric',month:'short'}):'–';
+  const nRes=sets.reduce((s,x)=>s+x.base.res.length,0),src=[...new Set(sets.map(x=>x.base.src))].join(' e ');
+  const stale=last&&(now-last)/864e5>9;
+  st.innerHTML=[`<span>Risultati: <b>${nRes}</b> partite da ${src}, aggiornati almeno al ${ld}. Quote: ${books.size?'The Odds API, '+books.size+' bookmaker':'da inserire a mano'}.</span>`,
+    stale?`<span class="warn">L'archivio risultati è fermo da ${Math.round((now-last)/864e5)} giorni: aggiungi la chiave gratuita di football-data.org in "Fonti dati e chiavi" per stime più precise.</span>`:'',
+    ...sets.flatMap(x=>x.notes).map(n=>`<span class="err">${n}</span>`),
+    errs.length?`<span class="err">Non caricati: ${errs.join(', ')}.</span>`:''].join('');
+  render();
+}
+
+function render(){
+  if(!state.sets.length)return;
+  const manual=ls.get('manual',{}),S=STYLE[state.style],bank=ls.get('bank',1000),all=state.league==='all';
+  const rows=[];
+  for(const set of state.sets)for(const f of set.fixtures)rows.push({set,f});
+  rows.sort((x,y)=>x.f.d-y.f.d);
+  const lbl={'1':'1','X':'X','2':'2','O':'Over 2.5','U':'Under 2.5'};
+  const W=0.45; // peso del modello, il resto al mercato
+  const cards=[],picks=[];
+  rows.forEach(({set,f},idx)=>{
+    const {M,L}=set;
+    const key=L.id+'|'+f.d.toISOString().slice(0,10)+'|'+norm(f.hn).join('')+'|'+norm(f.an).join('');
+    const P=f.h&&f.a?predict(M,f.h,f.a):null;
+    const api=f.ev?oddsFor(f.ev,state.book):{};
+    const man=manual[key]||{};
+    const q={};['1','X','2','O','U'].forEach(k=>{const v=parseFloat(man[k]);q[k]=v>1?v:(api[k]||null)});
+    let mk=null;if(q['1']&&q.X&&q['2']){const s=1/q['1']+1/q.X+1/q['2'];mk={'1':1/q['1']/s,'X':1/q.X/s,'2':1/q['2']/s}}
+    let mo=null;if(q.O&&q.U){const s=1/q.O+1/q.U;mo={O:1/q.O/s,U:1/q.U/s}}
+    const pr={};
+    if(P){pr['1']=mk?W*P.p1+(1-W)*mk['1']:P.p1;pr.X=mk?W*P.px+(1-W)*mk.X:P.px;pr['2']=mk?W*P.p2+(1-W)*mk['2']:P.p2;
+      pr.O=mo?W*P.ov+(1-W)*mo.O:P.ov;pr.U=1-pr.O}
+    const ev={};for(const k in pr)if(q[k])ev[k]=pr[k]*q[k];
+    // una sola giocata per partita: quella con la resa più alta sopra soglia
+    let best=null;for(const k of ['1','X','2','O','U'])if(ev[k]&&ev[k]>=1+S.edge&&pr[k]>=0.15&&(!best||ev[k]>ev[best]))best=k;
+    let pick=null;
+    if(best){const kelly=(pr[best]*q[best]-1)/(q[best]-1);const frac=Math.min(0.05,kelly*S.kf);
+      pick={k:best,lbl:lbl[best],m:f.hn+' – '+f.an,lg:L.name,d:f.d,p:pr[best],q:q[best],ev:ev[best],frac};picks.push(pick)}
+    cards.push({f,L,idx,key,P,pr,q,ev,mk,pick});
+  });
+  // non più del 25% della cassa in totale
+  const tot=picks.reduce((s,p)=>s+p.frac,0),scale=tot>0.25?0.25/tot:1;
+  picks.forEach(p=>{p.stake=Math.max(1,Math.round(bank*p.frac*scale))});
+  const out=[];let lastDay='';
+  for(const c of cards.slice(0,all?80:40)){
+    const {f,L,idx,key,P,pr,q,ev,mk,pick}=c;
+    const day=fmtD(f.d);if(day!==lastDay){out.push(`<div class="day">${day}</div>`);lastDay=day}
+    const cell=(k,name)=>`<div class="cell${pick&&pick.k===k?' best':''}"><div class="k"><span>${name}</span><span>${pct(pr[k])}</span></div>
+      <input type="text" inputmode="decimal" id="q${idx}_${k}" data-key="${esc(key)}" data-k="${k}" value="${q[k]?q[k].toFixed(2):''}" placeholder="quota" aria-label="Quota ${name}">
+      <div class="v ${ev[k]>1?'pos':'neg'}">${ev[k]?'Resa '+ev[k].toFixed(2):'—'}</div>${pick&&pick.k===k?`<div class="stake">Punta ${pick.stake}</div>`:''}</div>`;
+    out.push(`<article class="card">
+      ${all?`<div class="lg">${L.name}</div>`:''}
+      <div class="teams"><div class="t">${esc(f.hn)}</div><div class="time">${fmtT(f.d)}</div><div class="t r">${esc(f.an)}</div></div>
+      ${pr['1']!=null?`<div class="prob" aria-hidden="true"><i style="width:${pr['1']*100}%;background:var(--p1)"></i><i style="width:${pr.X*100}%;background:var(--px)"></i><i style="width:${pr['2']*100}%;background:var(--p2)"></i></div>`:''}
+      ${!P?`<div class="na">Dati storici insufficienti per ${esc(!f.h?f.hn:f.an)}: meglio non giocarla.</div>`:''}
+      <div class="grid3">${cell('1','1')}${cell('X','X')}${cell('2','2')}</div>
+      <details class="more"${pick&&(pick.k==='O'||pick.k==='U')?' open':''}><summary>Gol e risultato esatto</summary>
+        <div class="grid3" style="grid-template-columns:repeat(2,1fr);margin-top:8px">${cell('O','Over 2.5')}${cell('U','Under 2.5')}</div>
+        ${P?`<div class="kv">
+          <div><span>Gol attesi casa</span><b>${P.lh.toFixed(2)}</b></div>
+          <div><span>Gol attesi ospite</span><b>${P.la.toFixed(2)}</b></div>
+          <div><span>Goal (GG)</span><b>${pct(P.gg)}</b></div>
+          <div><span>No goal (NG)</span><b>${pct(P.ng)}</b></div>
+          <div><span>Risultato più probabile</span><b>${P.score} · ${pct(P.scoreP)}</b></div>
+          <div><span>Solo modello 1·X·2</span><b>${pct(P.p1)} ${pct(P.px)} ${pct(P.p2)}</b></div>
+          ${mk?`<div><span>Solo quote 1·X·2</span><b>${pct(mk['1'])} ${pct(mk.X)} ${pct(mk['2'])}</b></div>`:''}
+        </div>`:''}
+      </details>
+    </article>`);
+  }
+  $('#list').innerHTML=out.length?out.join(''):'<div class="how">Nessuna partita in programma trovata. Se è una pausa per le nazionali, riprova nei prossimi giorni.</div>';
+  picks.sort((a,b)=>b.ev-a.ev);
+  const hasOdds=cards.some(c=>c.q['1']);
+  const staked=picks.reduce((s,p)=>s+p.stake,0),gain=picks.reduce((s,p)=>s+p.stake*(p.ev-1),0);
+  $('#picks').innerHTML='<h2>Migliori giocate</h2>'+(picks.length?picks.slice(0,12).map(p=>`<div class="row"><div class="m">${esc(p.m)} <span class="badge" style="background:var(--bg);color:var(--pitch)">${p.lbl}</span><div class="d">${all?p.lg+' · ':''}${fmtD(p.d)} · prob. ${pct(p.p)} · quota ${p.q.toFixed(2)} · resa ${p.ev.toFixed(2)}</div></div><div class="ev">${p.stake}<div class="d">punti</div></div></div>`).join('')
+      +`<div class="sum">${picks.length} giocate, ${staked} punti puntati in tutto. Guadagno atteso: circa +${Math.round(gain)} punti, ma su una singola giornata puoi anche andare sotto.</div>`
+    :`<div class="empty">${hasOdds?'Nessuna partita ha un vantaggio sufficiente: oggi conviene non giocare, oppure prova la prudenza Aggressivo.':'Servono le quote: aggiungi la chiave in "Fonti dati e chiavi" oppure scrivile nelle caselle delle partite.'}</div>`);
+}
+
+$('#list').addEventListener('change',e=>{const i=e.target.closest('input[data-key]');if(!i)return;
+  const m=ls.get('manual',{});const v=parseFloat(i.value.replace(',','.'));m[i.dataset.key]=m[i.dataset.key]||{};
+  if(v>1)m[i.dataset.key][i.dataset.k]=v;else delete m[i.dataset.key][i.dataset.k];ls.set('manual',m);render()});
+
+tabs();load();
+})();
+</script>
+</body>
+</html>
