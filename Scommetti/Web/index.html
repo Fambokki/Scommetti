@@ -175,6 +175,14 @@ main{padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 44px)}
 .ico img{width:100%;max-width:64px;aspect-ratio:1;border-radius:22%;box-shadow:0 6px 16px -8px var(--glass-shade);outline:3px solid transparent;outline-offset:2px;transition:outline-color .2s}
 .ico[aria-checked="true"]{color:var(--ink)}
 .ico[aria-checked="true"] img{outline-color:var(--signal)}
+/* barre leggibili durante lo scorrimento: vetro più denso e sfumatura sotto la barra schede */
+:root{--bar:rgba(240,244,247,.86)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bar:rgba(14,20,30,.88)}}
+:root[data-theme="dark"]{--bar:rgba(14,20,30,.88)}
+.top,body::before,.tabbar{background:var(--bar);-webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%)}
+.top{transform:translateZ(0)}
+.fade-bottom{position:fixed;left:0;right:0;bottom:0;height:calc(120px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 70%);pointer-events:none;z-index:5}
+.status{text-shadow:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -240,6 +248,7 @@ main{padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 44px)}
   </section>
 </main>
 
+<div class="fade-bottom" aria-hidden="true"></div>
 <nav class="tabbar" id="tabbar" aria-label="Sezioni">
   <button data-v="partite" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7l4.3 3.1-1.6 5H9.3l-1.6-5z"/></svg>Partite</button>
   <button data-v="schedina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Schedina<span class="badge" id="badge" hidden>0</span></button>
