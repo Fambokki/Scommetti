@@ -20,6 +20,7 @@ struct AppWebView: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
         config.userContentController.addScriptMessageHandler(context.coordinator, contentWorld: .page, name: "net")
+        config.userContentController.addScriptMessageHandler(context.coordinator, contentWorld: .page, name: "icon")
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -47,6 +48,10 @@ struct AppWebView: UIViewRepresentable {
         func userContentController(_ userContentController: WKUserContentController,
                                    didReceive message: WKScriptMessage,
                                    replyHandler: @escaping (Any?, String?) -> Void) {
+            if message.name == "icon" {
+                handleIcon(message.body, replyHandler: replyHandler)
+                return
+            }
             guard let body = message.body as? [String: Any],
                   let text = body["url"] as? String,
                   let url = URL(string: text),
@@ -70,6 +75,31 @@ struct AppWebView: UIViewRepresentable {
                     replyHandler(["status": status, "body": text], nil)
                 }
             }.resume()
+        }
+
+        /// Cambia l'icona sulla schermata Home. "default" torna all'icona principale.
+        private func handleIcon(_ body: Any, replyHandler: @escaping (Any?, String?) -> Void) {
+            let app = UIApplication.shared
+            guard app.supportsAlternateIcons else {
+                replyHandler(nil, "Questo dispositivo non permette di cambiare icona")
+                return
+            }
+            let data = body as? [String: Any] ?? [:]
+            guard let name = data["set"] as? String else {
+                replyHandler(app.alternateIconName ?? "default", nil)
+                return
+            }
+            let target: String? = (name == "default") ? nil : name
+            if app.alternateIconName == target {
+                replyHandler(name, nil)
+                return
+            }
+            app.setAlternateIconName(target) { error in
+                DispatchQueue.main.async {
+                    if let error = error { replyHandler(nil, error.localizedDescription) }
+                    else { replyHandler(name, nil) }
+                }
+            }
         }
 
         // I link esterni (registrazione chiavi, siti dei bookmaker) si aprono in Safari.

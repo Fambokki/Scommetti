@@ -170,6 +170,11 @@ body::before{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate
 main{padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 44px)}
 .ticket{filter:drop-shadow(0 12px 22px var(--glass-shade))}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.match,.panel,.top,.tabbar,.seg{background:var(--card)}}
+.icons{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.ico{border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.74rem;font-weight:600;color:var(--muted);cursor:pointer;min-width:0}
+.ico img{width:100%;max-width:64px;aspect-ratio:1;border-radius:22%;box-shadow:0 6px 16px -8px var(--glass-shade);outline:3px solid transparent;outline-offset:2px;transition:outline-color .2s}
+.ico[aria-checked="true"]{color:var(--ink)}
+.ico[aria-checked="true"] img{outline-color:var(--signal)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -220,6 +225,11 @@ main{padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 44px)}
       </div>
       <button class="btn" id="save">Salva e aggiorna</button>
       <span class="saved" id="savedMsg" hidden>Chiavi salvate.</span>
+    </div>
+    <div class="panel">
+      <h2>Icona dell'app</h2>
+      <div class="icons" id="icons" role="radiogroup" aria-label="Icona dell'app"></div>
+      <p id="iconMsg">Tocca un'icona per usarla sulla schermata Home.</p>
     </div>
     <div class="panel">
       <h2>Come ragiona l'app</h2>
@@ -437,6 +447,15 @@ $('#bank').addEventListener('change',e=>{const v=parseFloat(e.target.value.repla
 $('#save').addEventListener('click',()=>{ls.set('kOdds',$('#kOdds').value.trim());ls.set('kFd',$('#kFd').value.trim());
   LEAGUES.forEach(L=>{try{localStorage.removeItem('odds_'+L.id)}catch(e){}});state.cache={};$('#savedMsg').hidden=false;setTimeout(()=>$('#savedMsg').hidden=true,2500);load(true)});
 
+const ICONS=[['default','Vetro'],['AppIcon-Campo','Campo'],['AppIcon-Schedina','Schedina'],['AppIcon-Notte','Notte'],['AppIcon-Oro','Oro']];
+const iconNat=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.icon;
+let curIcon='default';
+function drawIcons(){$('#icons').innerHTML=ICONS.map(([id,n])=>`<button class="ico" role="radio" aria-checked="${id===curIcon}" data-id="${id}"><img src="icons/${id==='default'?'default':id.replace('AppIcon-','').toLowerCase()}.png" alt="">${n}</button>`).join('')}
+$('#icons').addEventListener('click',async e=>{const b=e.target.closest('.ico');if(!b)return;
+  if(!iconNat){$('#iconMsg').textContent="Il cambio icona funziona nell'app installata sull'iPhone.";return}
+  try{curIcon=await iconNat.postMessage({set:b.dataset.id});drawIcons();$('#iconMsg').textContent='Icona cambiata.'}catch(err){$('#iconMsg').textContent='Non è stato possibile cambiare icona: '+(err&&err.message||err)}});
+if(iconNat)iconNat.postMessage({}).then(v=>{curIcon=v||'default';drawIcons()}).catch(()=>{});
+drawIcons();
 segSync();leagues();load();
 })();
 </script>
