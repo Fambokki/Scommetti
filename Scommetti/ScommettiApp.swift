@@ -28,6 +28,7 @@ struct AppWebView: UIViewRepresentable {
         webView.isOpaque = false
         webView.backgroundColor = .systemBackground
         webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.bounces = false
         webView.allowsBackForwardNavigationGestures = false
 
         if let url = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "Web") {

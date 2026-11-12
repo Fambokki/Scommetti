@@ -183,6 +183,16 @@ main{padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 44px)}
 .top{transform:translateZ(0)}
 .fade-bottom{position:fixed;left:0;right:0;bottom:0;height:calc(120px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 70%);pointer-events:none;z-index:5}
 .status{text-shadow:none}
+/* impaginazione a guscio: titolo fisso in alto, solo l'elenco scorre sotto di lui */
+:root{--bar-solid:#E9EEF2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bar-solid:#0F1620}}
+:root[data-theme="dark"]{--bar-solid:#0F1620}
+html,body{height:100%}
+body{display:flex;flex-direction:column;overflow:hidden;height:100dvh}
+body::before{display:none}
+.top{position:relative;top:auto;flex:none;background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none;padding-top:calc(14px + env(safe-area-inset-top,0px));box-shadow:0 1px 0 var(--glass-edge),0 8px 20px -14px var(--glass-shade);z-index:7}
+main{flex:1;min-height:0;width:100%;max-width:none;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+main>.view{max-width:680px;margin:0 auto}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -444,7 +454,7 @@ $('#refresh').addEventListener('click',()=>{state.cache={};load(true)});
 $('#tabbar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.view=b.dataset.v;
   document.querySelectorAll('#tabbar button').forEach(x=>x.toggleAttribute('aria-current',x===b));
   document.querySelectorAll('#tabbar button[aria-current]').forEach(x=>x.setAttribute('aria-current','page'));
-  ['partite','schedina','imp'].forEach(v=>$('#v-'+v).hidden=v!==state.view);window.scrollTo(0,0)});
+  ['partite','schedina','imp'].forEach(v=>$('#v-'+v).hidden=v!==state.view);document.querySelector('main').scrollTop=0});
 $('#list').addEventListener('click',e=>{const h=e.target.closest('.mhead');if(!h)return;const art=h.closest('.match'),k=art.dataset.key;
   const open=!state.open.has(k);open?state.open.add(k):state.open.delete(k);art.classList.toggle('open',open);h.setAttribute('aria-expanded',open);art.querySelector('.detail').hidden=!open});
 $('#list').addEventListener('change',e=>{const i=e.target.closest('input[data-k]');if(!i)return;const key=i.closest('.match').dataset.key;
