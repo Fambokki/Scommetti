@@ -126,10 +126,55 @@ main{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-lef
 .tabbar svg{width:22px;height:22px}
 .tabbar button[aria-current="page"]{color:var(--signal)}
 .tabbar .badge{position:absolute;top:7px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--signal);color:#fff;font-size:.68rem;display:grid;place-items:center}
+
+/* Liquid glass: superfici traslucide sopra uno sfondo "campo" sfumato */
+:root{--glass:rgba(255,255,255,.52);--glass-strong:rgba(255,255,255,.72);--glass-edge:rgba(255,255,255,.85);--glass-hi:rgba(255,255,255,.95);--glass-shade:rgba(16,24,38,.10);
+  --blob1:#7FD3A8;--blob2:#FFB59E;--blob3:#9CC3FF;--fill:rgba(16,24,38,.05)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--glass:rgba(28,38,54,.46);--glass-strong:rgba(34,46,64,.7);--glass-edge:rgba(255,255,255,.14);--glass-hi:rgba(255,255,255,.22);--glass-shade:rgba(0,0,0,.45);
+  --blob1:#145C3A;--blob2:#6B2A1C;--blob3:#1E3A6B;--fill:rgba(255,255,255,.06)}}
+:root[data-theme="dark"]{--glass:rgba(28,38,54,.46);--glass-strong:rgba(34,46,64,.7);--glass-edge:rgba(255,255,255,.14);--glass-hi:rgba(255,255,255,.22);--glass-shade:rgba(0,0,0,.45);
+  --blob1:#145C3A;--blob2:#6B2A1C;--blob3:#1E3A6B;--fill:rgba(255,255,255,.06)}
+.backdrop{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--bg);overflow:hidden}
+.backdrop i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.75}
+.backdrop i:nth-child(1){width:70vmax;height:70vmax;left:-25vmax;top:-20vmax;background:var(--blob1)}
+.backdrop i:nth-child(2){width:55vmax;height:55vmax;right:-22vmax;top:30vh;background:var(--blob2);opacity:.55}
+.backdrop i:nth-child(3){width:60vmax;height:60vmax;left:-10vmax;bottom:-30vmax;background:var(--blob3);opacity:.6}
+@media (prefers-reduced-motion:no-preference){.backdrop i{animation:drift 26s ease-in-out infinite alternate}.backdrop i:nth-child(2){animation-duration:32s}.backdrop i:nth-child(3){animation-duration:38s}}
+@keyframes drift{to{transform:translate(6vmax,4vmax) scale(1.08)}}
+body{background:transparent}
+html{background:var(--bg)}
+.glass,.match,.panel,.top,.tabbar,.seg,.ctl input,.ctl select,.icon-btn{
+  background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-hi),inset 0 -1px 0 var(--fill),0 10px 30px -12px var(--glass-shade)}
+body::before{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%)}
+.top{border-width:0 0 1px;box-shadow:inset 0 -1px 0 var(--glass-edge);border-radius:0}
+.match{border-radius:22px}
+.panel{border-radius:22px}
+.icon-btn{border-radius:50%}
+.odd{border:1px solid var(--glass-edge);background:var(--fill);border-radius:14px;box-shadow:inset 0 1px 0 var(--glass-hi)}
+.odd.value{background:color-mix(in srgb,var(--signal) 16%,transparent);border-color:color-mix(in srgb,var(--signal) 70%,transparent)}
+.qedit input,.field input,.field select{background:var(--fill);border-color:var(--glass-edge);border-radius:12px}
+.detail{border-top-color:var(--glass-edge)}
+.stats div{border-bottom-color:var(--glass-edge)}
+.lg-btn{border-radius:999px}
+.lg-btn[aria-pressed="true"]{background:var(--glass-strong);color:var(--ink);box-shadow:inset 0 1px 0 var(--glass-hi),0 4px 14px -6px var(--glass-shade);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.seg{border-radius:999px;padding:4px}
+.seg button{border-radius:999px}
+.seg button[aria-pressed="true"]{background:var(--glass-strong);color:var(--ink);box-shadow:inset 0 1px 0 var(--glass-hi),0 3px 10px -4px var(--glass-shade)}
+.ctl input,.ctl select{border-radius:14px}
+.btn{border-radius:999px;padding:11px 18px}
+.tabbar{left:max(14px,env(safe-area-inset-left,0px));right:max(14px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:5px;border-radius:32px;max-width:460px;margin:0 auto;gap:4px}
+.tabbar button{height:52px;border-radius:26px;transition:background .25s,color .25s}
+.tabbar button[aria-current="page"]{background:var(--glass-strong);box-shadow:inset 0 1px 0 var(--glass-hi),0 4px 14px -6px var(--glass-shade)}
+.tabbar .badge{top:4px}
+main{padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 44px)}
+.ticket{filter:drop-shadow(0 12px 22px var(--glass-shade))}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.match,.panel,.top,.tabbar,.seg{background:var(--card)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
+<div class="backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <header class="top">
   <div class="brand">
@@ -147,7 +192,7 @@ main{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-lef
 
   <section class="view" id="v-schedina" hidden>
     <div class="controls">
-      <label class="ctl" for="bank">Cassa in punti<input id="bank" type="text" inputmode="numeric" class="num"></label>
+      <label class="ctl" for="bank">Cassa in €<input id="bank" type="text" inputmode="numeric" class="num"></label>
       <div class="ctl">Quote da
         <select id="book" aria-label="Bookmaker"><option value="median">Mediana bookmaker</option></select>
       </div>
@@ -180,7 +225,7 @@ main{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-lef
       <h2>Come ragiona l'app</h2>
       <p>La probabilità di ogni segno unisce un modello di Poisson (attacco e difesa delle squadre, fattore campo, partite recenti pesate di più) con le probabilità implicite nelle quote, tolto il margine del bookmaker.</p>
       <p>La resa è probabilità per quota. Sopra 1 la giocata è a tuo favore; sotto 1 perdi nel lungo periodo, anche se sembra sicura. La schedina contiene solo giocate con resa sopra la soglia della prudenza scelta, al massimo una per partita.</p>
-      <p>La puntata segue il criterio di Kelly frazionato: mai oltre il 5% della cassa su una partita e il 25% in totale. Infortuni, formazioni e meteo non entrano nei dati.</p>
+      <p>La puntata segue il criterio di Kelly frazionato, in euro del gioco (1 punto = 1 €): mai oltre il 5% della cassa su una partita e il 25% in totale. Infortuni, formazioni e meteo non entrano nei dati.</p>
     </div>
   </section>
 </main>
@@ -311,6 +356,7 @@ async function load(force){
 const fmtD=d=>{const t=new Date();t.setHours(0,0,0,0);const x=new Date(d);x.setHours(0,0,0,0);const diff=Math.round((x-t)/864e5);
   const s=d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});return diff===0?'Oggi, '+s:diff===1?'Domani, '+s:s.charAt(0).toUpperCase()+s.slice(1)};
 const fmtT=d=>d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+const eur=n=>Math.round(n).toLocaleString('it-IT')+' €';
 const pct=p=>p==null?'–':Math.round(p*100)+'%';
 const LBL={'1':'1','X':'X','2':'2','O':'Over 2,5','U':'Under 2,5'};
 function compute(){
@@ -340,13 +386,13 @@ function render(){
     const day=fmtD(f.d);if(day!==lastDay){out.push(`<h2 class="day">${day}</h2>`);lastDay=day}
     const open=state.open.has(key);
     const cell=k=>{const isV=pick&&pick.k===k;return `<div class="odd${isV?' value':''}"><div class="sg"><span>${k}</span><span>${pct(pr[k])}</span></div>
-      <div class="q num${q[k]?'':' none'}">${q[k]?q[k].toFixed(2):'—'}</div>${isV?`<div class="flag">Valore · ${pick.stake} pt</div>`:''}
+      <div class="q num${q[k]?'':' none'}">${q[k]?q[k].toFixed(2):'—'}</div>${isV?`<div class="flag">Valore · ${eur(pick.stake)}</div>`:''}
       ${pr[k]!=null?`<div class="meter" style="width:${(pr[k]*100).toFixed(1)}%"></div>`:''}</div>`};
     const ouPick=pick&&(pick.k==='O'||pick.k==='U');
     out.push(`<article class="match${open?' open':''}" data-key="${esc(key)}">
       <button class="mhead" aria-expanded="${open}"><span class="time num">${fmtT(f.d)}</span><span class="team">${esc(f.hn)}</span>${all?`<span class="lgname">${L.name}</span>`:''}<span class="team">${esc(f.an)}</span>${CHEV}</button>
       <div class="odds">${cell('1')}${cell('X')}${cell('2')}</div>
-      ${ouPick?`<div class="note">Valore su ${LBL[pick.k]} a ${pick.q.toFixed(2)}: ${pick.stake} punti.</div>`:''}
+      ${ouPick?`<div class="note">Valore su ${LBL[pick.k]} a ${pick.q.toFixed(2)}: punta ${eur(pick.stake)}.</div>`:''}
       ${!P?`<div class="note">Squadra con pochi dati storici: meglio non giocarla.</div>`:''}
       <div class="detail"${open?'':' hidden'}>
         <h3>Quote del tuo bookmaker</h3>
@@ -365,9 +411,9 @@ function render(){
   const staked=picks.reduce((s,p)=>s+p.stake,0),pot=picks.reduce((s,p)=>s+p.stake*p.q,0),gain=picks.reduce((s,p)=>s+p.stake*(p.ev-1),0);
   const hasOdds=cards.some(c=>c.q['1']);
   const line=(a,b,cls='')=>`<div class="l ${cls}"><span>${a}</span><span class="dots"></span><span class="num">${b}</span></div>`;
-  $('#ticket').innerHTML=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${STYLE[state.style].name} · cassa ${bank}</small></div>`+
-    (picks.length?picks.map(p=>`<div class="tr"><span class="m">${esc(p.m)}</span>${line('Segno '+LBL[p.k]+' @ '+p.q.toFixed(2),p.stake+' pt')}<span class="sub">${state.league==='all'?p.lg+', ':''}${fmtD(p.d).toLowerCase()} ${fmtT(p.d)} · prob. ${pct(p.p)} · resa ${p.ev.toFixed(2)}</span></div>`).join('')+
-      `<div class="tt">${line('Giocate',picks.length)}${line('Puntata totale',staked+' pt')}${line('Vincita se le prendi tutte',Math.round(pot)+' pt')}${line('Guadagno atteso','+'+Math.round(gain)+' pt','big')}</div>
+  $('#ticket').innerHTML=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${STYLE[state.style].name} · cassa ${eur(bank)}</small></div>`+
+    (picks.length?picks.map(p=>`<div class="tr"><span class="m">${esc(p.m)}</span>${line('Segno '+LBL[p.k]+' @ '+p.q.toFixed(2),eur(p.stake))}<span class="sub">${state.league==='all'?p.lg+', ':''}${fmtD(p.d).toLowerCase()} ${fmtT(p.d)} · prob. ${pct(p.p)} · resa ${p.ev.toFixed(2)}</span></div>`).join('')+
+      `<div class="tt">${line('Giocate',picks.length)}${line('Puntata totale',eur(staked))}${line('Vincita se le prendi tutte',eur(pot))}${line('Guadagno atteso','+'+eur(gain),'big')}</div>
       <p class="tfoot">Il guadagno atteso vale sul lungo periodo: una singola giornata può andare sotto.</p>`
     :`<p class="empty">${hasOdds?'Oggi nessuna partita ha abbastanza valore. Non giocare è la scelta giusta, oppure prova la prudenza Aggressivo.':'Mancano le quote. Aggiungi la chiave in Impostazioni o scrivile nel dettaglio di ogni partita.'}</p>`);
   const b=$('#badge');b.textContent=picks.length;b.hidden=!picks.length}
