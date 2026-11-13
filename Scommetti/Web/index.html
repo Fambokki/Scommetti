@@ -370,16 +370,37 @@ async function loadOpenfootball(L){
   return {res,fix,src:'openfootball',lastDate}}
 const SHORT={};
 const show=(t,fb)=>t?(SHORT[t]||t):fb;
-async function loadFD(L,key){
-  const res=[],fix=[];let lastDate=null;
-  for(const y of [curStart-1,curStart]){let d;try{d=await getJSON(`https://api.football-data.org/v4/competitions/${L.fd}/matches?season=${y}`,{headers:{'X-Auth-Token':key}})}catch(e){if(y==curStart)throw e;continue}
-    for(const m of d.matches||[]){const dt=new Date(m.utcDate);const h=m.homeTeam&&m.homeTeam.name,a=m.awayTeam&&m.awayTeam.name;if(!h||!a)continue;const ft=m.score&&m.score.fullTime;
-      if(m.homeTeam.shortName)SHORT[h]=m.homeTeam.shortName;if(m.awayTeam.shortName)SHORT[a]=m.awayTeam.shortName;
-      if(m.status==='FINISHED'&&ft&&ft.home!=null){res.push({h,a,hg:ft.home,ag:ft.away,d:dt,md:m.matchday});if(!lastDate||dt>lastDate)lastDate=dt}
-      else if(['SCHEDULED','TIMED'].includes(m.status))fix.push({h,a,d:dt,md:m.matchday})}}
-  return {res,fix,src:'football-data.org',lastDate}}
+/* football-data.org: piano gratuito = 10 richieste al minuto.
+   Le risposte vengono salvate in forma compatta: la stagione passata per 7 giorni, quella in corso per 20 minuti.
+   Le chiamate sono distanziate per restare sotto il limite; se il servizio rifiuta, si usa l'ultima copia salvata. */
+const FD_MAX=8;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function fdThrottle(){
+  let calls=ls.get('fdcalls',[]).filter(t=>Date.now()-t<60e3);
+  if(calls.length>=FD_MAX){const wait=60e3-(Date.now()-calls[0])+800;
+    $('#status').textContent='Attendo '+Math.ceil(wait/1000)+' secondi per i limiti di football-data.org…';await sleep(wait);
+    calls=ls.get('fdcalls',[]).filter(t=>Date.now()-t<60e3)}
+  calls.push(Date.now());ls.set('fdcalls',calls)}
+function fdCompact(d){return (d.matches||[]).filter(m=>m.homeTeam&&m.homeTeam.name&&m.awayTeam&&m.awayTeam.name).map(m=>{const ft=m.score&&m.score.fullTime||{};
+  return [m.utcDate,m.status,m.homeTeam.name,m.homeTeam.shortName||'',m.awayTeam.name,m.awayTeam.shortName||'',ft.home,ft.away,m.matchday]})}
+async function fdSeason(L,key,y,force){
+  const ck='fd_'+L.fd+'_'+y,c=ls.get(ck,null),ttl=y<curStart?7*864e5:20*60e3;
+  if(c&&!force&&Date.now()-c.t<ttl)return {rows:c.v,stale:false};
+  if(Date.now()<ls.get('fdblock',0)){if(c)return {rows:c.v,stale:true};throw new Error('richieste esaurite per ora')}
+  await fdThrottle();
+  try{const d=await getJSON(`https://api.football-data.org/v4/competitions/${L.fd}/matches?season=${y}`,{headers:{'X-Auth-Token':key}});
+    const v=fdCompact(d);ls.set(ck,{t:Date.now(),v});return {rows:v,stale:false}}
+  catch(e){if(/esaurite/.test(e.message))ls.set('fdblock',Date.now()+60e3);if(c)return {rows:c.v,stale:true};throw e}}
+async function loadFD(L,key,force){
+  const res=[],fix=[];let lastDate=null,stale=false;
+  for(const y of [curStart-1,curStart]){let r;try{r=await fdSeason(L,key,y,force&&y===curStart)}catch(e){if(y==curStart)throw e;continue}
+    if(r.stale)stale=true;
+    for(const [ud,st,h,hs,a,as,hg,ag,md] of r.rows){const dt=new Date(ud);if(hs)SHORT[h]=hs;if(as)SHORT[a]=as;
+      if(st==='FINISHED'&&hg!=null){res.push({h,a,hg,ag,d:dt,md});if(!lastDate||dt>lastDate)lastDate=dt}
+      else if(['SCHEDULED','TIMED'].includes(st))fix.push({h,a,d:dt,md})}}
+  return {res,fix,src:'football-data.org',lastDate,stale}}
 async function loadOdds(L,key,force){
-  const ck='odds_'+L.id,c=ls.get(ck,null);if(!force&&c&&Date.now()-c.t<30*60e3)return c.v;
+  const ck='odds_'+L.id,c=ls.get(ck,null);if(!force&&c&&Date.now()-c.t<60*60e3)return c.v;
   const v=await getJSON(`https://api.the-odds-api.com/v4/sports/${L.odds}/odds?regions=eu&markets=h2h,totals&oddsFormat=decimal&apiKey=${encodeURIComponent(key)}`);
   ls.set(ck,{t:Date.now(),v});return v}
 
@@ -421,14 +442,22 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 async function loadLeague(L,force){
   if(!force&&state.cache[L.id])return state.cache[L.id];
   const kFd=ls.get('kFd',''),kOdds=ls.get('kOdds','');const notes=[];let base;
-  if(kFd){try{base=await loadFD(L,kFd)}catch(e){notes.push(`${L.name}: football-data.org non risponde (${esc(e.message)}), uso openfootball.`)}}
+  if(kFd){try{base=await loadFD(L,kFd,force);if(base.stale)notes.push({t:'stale',l:L.name})}catch(e){notes.push({t:'fd',l:L.name,m:e.message})}}
   if(!base)base=await loadOpenfootball(L);
-  let odds=null;if(kOdds){try{odds=await loadOdds(L,kOdds,force)}catch(e){notes.push(`${L.name}: quote non disponibili (${esc(e.message)}). Controlla la chiave in Impostazioni.`)}}
+  let odds=null;if(kOdds){try{odds=await loadOdds(L,kOdds,force)}catch(e){notes.push({t:'odds',l:L.name,m:e.message})}}
   const M=fit(base.res);let fixtures;
   if(odds&&odds.length)fixtures=odds.map(ev=>({h:matchTeam(ev.home_team,M.teams),a:matchTeam(ev.away_team,M.teams),hn:'',an:'',d:new Date(ev.commence_time),ev})).map(f=>({...f,hn:show(f.h,f.ev.home_team),an:show(f.a,f.ev.away_team)}));
   else fixtures=base.fix.sort((x,y)=>x.d-y.d).slice(0,20).map(f=>({...f,hn:show(f.h),an:show(f.a)}));
   const books=new Map();if(odds)for(const ev of odds)for(const b of ev.bookmakers||[])books.set(b.key,b.title);
   return state.cache[L.id]={L,M,fixtures,base,odds,books,notes}}
+function summarize(notes,age){const out=[],hasKey=!!ls.get('kFd','');
+  const g=t=>notes.filter(n=>n.t===t),names=a=>a.map(n=>n.l).join(', ');
+  const fd=g('fd'),st=g('stale'),od=g('odds');
+  if(fd.length)out.push(`<span class="warn">football-data.org: ${esc(fd[0].m)}${fd.length<5?' per '+names(fd):''}. Uso l'archivio openfootball${fd.length===5?'':' per questi campionati'}. Riprova tra un minuto con il tasto aggiorna.</span>`);
+  if(st.length)out.push(`<span>Risultati di ${names(st)} dall'ultima copia salvata: si aggiornano al prossimo tentativo.</span>`);
+  if(od.length)out.push(`<span class="warn">Quote: ${esc(od[0].m)}${od.length<5?' per '+names(od):''}. Controlla la chiave in Impostazioni.</span>`);
+  if(age>9&&!fd.length)out.push(`<span class="warn">I risultati sono fermi a ${age} giorni fa.${hasKey?'':' Aggiungi la chiave di football-data.org in Impostazioni per stime più precise.'}</span>`);
+  return out}
 async function load(force){
   const ids=state.league==='all'?LEAGUES:[LEAGUES.find(x=>x.id===state.league)];
   $('#refresh').classList.add('spin');$('#status').textContent='Caricamento '+(state.league==='all'?'dei 5 campionati':ids[0].name)+'…';
@@ -443,8 +472,7 @@ async function load(force){
   const age=last?Math.round((now-last)/864e5):0;
   const nRes=sets.reduce((s,x)=>s+x.base.res.length,0);
   $('#status').innerHTML=[`<span>${nRes} risultati analizzati, quote ${books.size?'da '+books.size+' bookmaker':'da inserire a mano'}.</span>`,
-    age>9?`<span class="warn">I risultati sono fermi a ${age} giorni fa. Aggiungi la chiave di football-data.org in Impostazioni per stime più precise.</span>`:'',
-    ...sets.flatMap(x=>x.notes).map(n=>`<span class="warn">${n}</span>`),errs.length?`<span class="warn">Non caricati: ${errs.join(', ')}.</span>`:''].join('');
+    ...summarize(sets.flatMap(x=>x.notes),age),errs.length?`<span class="warn">Non caricati: ${errs.join(', ')}.</span>`:''].join('');
   render()}
 
 /* calcolo giocate */
