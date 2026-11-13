@@ -193,6 +193,8 @@ body::before{display:none}
 .top{position:relative;top:auto;flex:none;background:var(--bar-solid);-webkit-backdrop-filter:none;backdrop-filter:none;padding-top:calc(14px + env(safe-area-inset-top,0px));box-shadow:0 1px 0 var(--glass-edge),0 8px 20px -14px var(--glass-shade);z-index:7}
 main{flex:1;min-height:0;width:100%;max-width:none;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 main>.view{max-width:680px;margin:0 auto}
+.legend{margin:4px 0 0;font-size:.84rem;color:var(--muted);display:flex;gap:8px;align-items:flex-start}
+.legend .dot{flex:none;width:12px;height:12px;margin-top:3px;border-radius:4px;border:1.5px solid var(--signal);background:color-mix(in srgb,var(--signal) 16%,transparent)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -210,6 +212,7 @@ main>.view{max-width:680px;margin:0 auto}
 <main>
   <section class="view" id="v-partite">
     <div class="status" id="status">Caricamento dati…</div>
+    <p class="legend" id="legend" hidden><span class="dot"></span>Riquadro rosso: giocata con valore, la quota paga più del dovuto. Sotto trovi quanto puntare.</p>
     <div id="list" class="view"></div>
   </section>
 
@@ -294,10 +297,12 @@ function matchTeam(name,teams){const a=norm(name);let best=null,bs=0;
   return bs>=0.34?best:null}
 
 /* rete: nell'app iOS passa dal ponte nativo, nel browser usa fetch */
+const ERR={401:'chiave non valida',403:'chiave non abilitata',404:'dati non trovati',422:'richiesta non accettata',429:'richieste esaurite per ora',500:'servizio non disponibile',503:'servizio non disponibile'};
+const httpErr=c=>new Error(ERR[c]||('errore '+c));
 async function getJSON(url,opt){
   const nat=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.net;
-  if(nat){const r=await nat.postMessage({url,headers:(opt&&opt.headers)||{}});if(r.status<200||r.status>=300)throw new Error('HTTP '+r.status);return JSON.parse(r.body)}
-  const r=await fetch(url,opt);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+  if(nat){const r=await nat.postMessage({url,headers:(opt&&opt.headers)||{}});if(r.status<200||r.status>=300)throw httpErr(r.status);return JSON.parse(r.body)}
+  const r=await fetch(url,opt);if(!r.ok)throw httpErr(r.status);return r.json()}
 async function loadOpenfootball(L){
   const res=[],fix=[];let lastDate=null;
   for(const y of [curStart-1,curStart]){let d;try{d=await getJSON(`https://raw.githubusercontent.com/openfootball/football.json/master/${sName(y)}/${L.of}.json`)}catch(e){continue}
@@ -305,10 +310,13 @@ async function loadOpenfootball(L){
       if(ft&&ft.length==2){res.push({h:m.team1,a:m.team2,hg:ft[0],ag:ft[1],d:dt});if(!lastDate||dt>lastDate)lastDate=dt}
       else if(y==curStart&&dt>=new Date(now.getTime()-3*3600e3))fix.push({h:m.team1,a:m.team2,d:dt})}}
   return {res,fix,src:'openfootball',lastDate}}
+const SHORT={};
+const show=(t,fb)=>t?(SHORT[t]||t):fb;
 async function loadFD(L,key){
   const res=[],fix=[];let lastDate=null;
   for(const y of [curStart-1,curStart]){let d;try{d=await getJSON(`https://api.football-data.org/v4/competitions/${L.fd}/matches?season=${y}`,{headers:{'X-Auth-Token':key}})}catch(e){if(y==curStart)throw e;continue}
     for(const m of d.matches||[]){const dt=new Date(m.utcDate);const h=m.homeTeam&&m.homeTeam.name,a=m.awayTeam&&m.awayTeam.name;if(!h||!a)continue;const ft=m.score&&m.score.fullTime;
+      if(m.homeTeam.shortName)SHORT[h]=m.homeTeam.shortName;if(m.awayTeam.shortName)SHORT[a]=m.awayTeam.shortName;
       if(m.status==='FINISHED'&&ft&&ft.home!=null){res.push({h,a,hg:ft.home,ag:ft.away,d:dt});if(!lastDate||dt>lastDate)lastDate=dt}
       else if(['SCHEDULED','TIMED'].includes(m.status))fix.push({h,a,d:dt})}}
   return {res,fix,src:'football-data.org',lastDate}}
@@ -359,8 +367,8 @@ async function loadLeague(L,force){
   if(!base)base=await loadOpenfootball(L);
   let odds=null;if(kOdds){try{odds=await loadOdds(L,kOdds,force)}catch(e){notes.push(`${L.name}: quote non disponibili (${esc(e.message)}). Controlla la chiave in Impostazioni.`)}}
   const M=fit(base.res);let fixtures;
-  if(odds&&odds.length)fixtures=odds.map(ev=>({h:matchTeam(ev.home_team,M.teams),a:matchTeam(ev.away_team,M.teams),hn:ev.home_team,an:ev.away_team,d:new Date(ev.commence_time),ev}));
-  else fixtures=base.fix.sort((x,y)=>x.d-y.d).slice(0,20).map(f=>({...f,hn:f.h,an:f.a}));
+  if(odds&&odds.length)fixtures=odds.map(ev=>({h:matchTeam(ev.home_team,M.teams),a:matchTeam(ev.away_team,M.teams),hn:'',an:'',d:new Date(ev.commence_time),ev})).map(f=>({...f,hn:show(f.h,f.ev.home_team),an:show(f.a,f.ev.away_team)}));
+  else fixtures=base.fix.sort((x,y)=>x.d-y.d).slice(0,20).map(f=>({...f,hn:show(f.h),an:show(f.a)}));
   const books=new Map();if(odds)for(const ev of odds)for(const b of ev.bookmakers||[])books.set(b.key,b.title);
   return state.cache[L.id]={L,M,fixtures,base,odds,books,notes}}
 async function load(force){
@@ -445,6 +453,7 @@ function render(){
       `<div class="tt">${line('Giocate',picks.length)}${line('Puntata totale',eur(staked))}${line('Vincita se le prendi tutte',eur(pot))}${line('Guadagno atteso','+'+eur(gain),'big')}</div>
       <p class="tfoot">Il guadagno atteso vale sul lungo periodo: una singola giornata può andare sotto.</p>`
     :`<p class="empty">${hasOdds?'Oggi nessuna partita ha abbastanza valore. Non giocare è la scelta giusta, oppure prova la prudenza Aggressivo.':'Mancano le quote. Aggiungi la chiave in Impostazioni o scrivile nel dettaglio di ogni partita.'}</p>`);
+  $('#legend').hidden=!picks.length;
   const b=$('#badge');b.textContent=picks.length;b.hidden=!picks.length}
 
 /* eventi */
