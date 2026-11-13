@@ -195,6 +195,21 @@ main{flex:1;min-height:0;width:100%;max-width:none;overflow-y:auto;-webkit-overf
 main>.view{max-width:680px;margin:0 auto}
 .legend{margin:4px 0 0;font-size:.84rem;color:var(--muted);display:flex;gap:8px;align-items:flex-start}
 .legend .dot{flex:none;width:12px;height:12px;margin-top:3px;border-radius:4px;border:1.5px solid var(--signal);background:color-mix(in srgb,var(--signal) 16%,transparent)}
+:root{--fav:#12804A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fav:#3DC985}}
+:root[data-theme="dark"]{--fav:#3DC985}
+.odd.fav{border-color:color-mix(in srgb,var(--fav) 75%,transparent);background:color-mix(in srgb,var(--fav) 14%,transparent)}
+.odd.fav .meter{background:var(--fav);opacity:1}
+.odd.fav .sg span:last-child{color:var(--fav)}
+.odd.fav.value{border-color:var(--signal)}
+.flag.f{color:var(--fav)}
+.legend .dot.g{border-color:var(--fav);background:color-mix(in srgb,var(--fav) 14%,transparent)}
+.legend{flex-direction:column;gap:6px}
+.legend span.r{display:flex;gap:8px;align-items:flex-start}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.seg.sm{display:inline-grid;grid-template-columns:repeat(2,auto)}
+.seg.sm button{padding:6px 14px}
+.when{font-size:.75rem;color:var(--muted);grid-column:3;grid-row:1;text-align:right}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -212,7 +227,8 @@ main>.view{max-width:680px;margin:0 auto}
 <main>
   <section class="view" id="v-partite">
     <div class="status" id="status">Caricamento dati…</div>
-    <p class="legend" id="legend" hidden><span class="dot"></span>Riquadro rosso: giocata con valore, la quota paga più del dovuto. Sotto trovi quanto puntare.</p>
+    <div class="toolbar"><div class="seg sm" id="sort" role="group" aria-label="Ordina partite"><button data-v="time">Per orario</button><button data-v="prob">Più probabili</button></div></div>
+    <div class="legend" id="legend"><span class="r"><span class="dot g"></span>Verde: il risultato più probabile della partita.</span><span class="r" id="legendRed" hidden><span class="dot"></span>Rosso: giocata con valore, la quota paga più del dovuto. Sotto trovi quanto puntare.</span></div>
     <div id="list" class="view"></div>
   </section>
 
@@ -228,6 +244,7 @@ main>.view{max-width:680px;margin:0 auto}
         </div>
       </div>
     </div>
+    <div class="seg" id="tk" role="group" aria-label="Tipo di schedina" style="grid-template-columns:1fr 1fr"><button data-v="value">Con valore</button><button data-v="prob">Più probabili</button></div>
     <div class="ticket" id="ticket"></div>
   </section>
 
@@ -280,7 +297,7 @@ const LEAGUES=[
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const $=s=>document.querySelector(s);
 const STYLE={p:{edge:0.05,kf:0.25,name:'Prudente'},e:{edge:0.03,kf:1/3,name:'Equilibrato'},a:{edge:0.015,kf:0.5,name:'Aggressivo'}};
-const state={league:ls.get('lg','all'),style:ls.get('style','e'),book:'median',sets:[],cache:{},open:new Set(),view:'partite'};
+const state={sort:ls.get('sort','time'),tk:ls.get('tk','value'),league:ls.get('lg','all'),style:ls.get('style','e'),book:'median',sets:[],cache:{},open:new Set(),view:'partite'};
 if(!STYLE[state.style])state.style='e';
 $('#bank').value=ls.get('bank',1000);$('#kOdds').value=ls.get('kOdds','');$('#kFd').value=ls.get('kFd','');
 
@@ -410,7 +427,8 @@ function compute(){
     const ev={};for(const k in pr)if(q[k])ev[k]=pr[k]*q[k];
     let best=null;for(const k of ['1','X','2','O','U'])if(ev[k]&&ev[k]>=1+S.edge&&pr[k]>=0.15&&(!best||ev[k]>ev[best]))best=k;
     let pick=null;if(best){const kelly=(pr[best]*q[best]-1)/(q[best]-1);pick={k:best,m:f.hn+' – '+f.an,lg:L.name,d:f.d,p:pr[best],q:q[best],ev:ev[best],frac:Math.min(0.05,kelly*S.kf)};picks.push(pick)}
-    cards.push({f,L,idx,key,P,pr,q,ev,mk,pick,man})});
+    let fav=null;if(pr['1']!=null)for(const k of ['1','X','2'])if(!fav||pr[k]>pr[fav])fav=k;
+    cards.push({f,L,idx,key,P,pr,q,ev,mk,pick,man,fav})});
   const tot=picks.reduce((s,p)=>s+p.frac,0),scale=tot>0.25?0.25/tot:1;picks.forEach(p=>{p.stake=Math.max(1,Math.round(bank*p.frac*scale))});
   return {cards,picks,bank}}
 
@@ -418,16 +436,18 @@ function compute(){
 const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 function render(){
   if(!state.sets.length)return;const {cards,picks,bank}=compute(),all=state.league==='all';
-  const out=[];let lastDay='';
-  for(const c of cards.slice(0,all?80:40)){const {f,L,idx,key,P,pr,q,ev,mk,pick,man}=c;
-    const day=fmtD(f.d);if(day!==lastDay){out.push(`<h2 class="day">${day}</h2>`);lastDay=day}
+  const out=[];let lastDay='';const byProb=state.sort==='prob';
+  let list=cards.slice(0,all?80:40);if(byProb)list=list.filter(c=>c.fav).sort((a,b)=>b.pr[b.fav]-a.pr[a.fav]);
+  if(byProb&&list.length)out.push(`<h2 class="day">Dalla più sicura alla meno sicura</h2>`);
+  for(const c of list){const {f,L,idx,key,P,pr,q,ev,mk,pick,man,fav}=c;
+    const day=fmtD(f.d);if(!byProb&&day!==lastDay){out.push(`<h2 class="day">${day}</h2>`);lastDay=day}
     const open=state.open.has(key);
-    const cell=k=>{const isV=pick&&pick.k===k;return `<div class="odd${isV?' value':''}"><div class="sg"><span>${k}</span><span>${pct(pr[k])}</span></div>
-      <div class="q num${q[k]?'':' none'}">${q[k]?q[k].toFixed(2):'—'}</div>${isV?`<div class="flag">Valore · ${eur(pick.stake)}</div>`:''}
+    const cell=k=>{const isV=pick&&pick.k===k,isF=fav===k;return `<div class="odd${isV?' value':''}${isF?' fav':''}"><div class="sg"><span>${k}</span><span>${pct(pr[k])}</span></div>
+      <div class="q num${q[k]?'':' none'}">${q[k]?q[k].toFixed(2):'—'}</div>${isF?`<div class="flag f">Più probabile</div>`:''}${isV?`<div class="flag">Valore · ${eur(pick.stake)}</div>`:''}
       ${pr[k]!=null?`<div class="meter" style="width:${(pr[k]*100).toFixed(1)}%"></div>`:''}</div>`};
     const ouPick=pick&&(pick.k==='O'||pick.k==='U');
     out.push(`<article class="match${open?' open':''}" data-key="${esc(key)}">
-      <button class="mhead" aria-expanded="${open}"><span class="time num">${fmtT(f.d)}</span><span class="team">${esc(f.hn)}</span>${all?`<span class="lgname">${L.name}</span>`:''}<span class="team">${esc(f.an)}</span>${CHEV}</button>
+      <button class="mhead" aria-expanded="${open}"><span class="time num">${fmtT(f.d)}</span><span class="team">${esc(f.hn)}</span>${byProb?`<span class="when">${f.d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric'})}${all?' · '+L.name:''}</span>`:all?`<span class="lgname">${L.name}</span>`:''}<span class="team">${esc(f.an)}</span>${CHEV}</button>
       <div class="odds">${cell('1')}${cell('X')}${cell('2')}</div>
       ${ouPick?`<div class="note">Valore su ${LBL[pick.k]} a ${pick.q.toFixed(2)}: punta ${eur(pick.stake)}.</div>`:''}
       ${!P?`<div class="note">Squadra con pochi dati storici: meglio non giocarla.</div>`:''}
@@ -448,15 +468,30 @@ function render(){
   const staked=picks.reduce((s,p)=>s+p.stake,0),pot=picks.reduce((s,p)=>s+p.stake*p.q,0),gain=picks.reduce((s,p)=>s+p.stake*(p.ev-1),0);
   const hasOdds=cards.some(c=>c.q['1']);
   const line=(a,b,cls='')=>`<div class="l ${cls}"><span>${a}</span><span class="dots"></span><span class="num">${b}</span></div>`;
+  const head=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${state.tk==='prob'?'Più probabili':STYLE[state.style].name+' · cassa '+eur(bank)}</small></div>`;
+  if(state.tk==='prob'){
+    const top=cards.filter(c=>c.fav).sort((a,b)=>b.pr[b.fav]-a.pr[a.fav]).slice(0,10);
+    let all3=1;top.slice(0,3).forEach(c=>all3*=c.pr[c.fav]);let all5=1;top.slice(0,5).forEach(c=>all5*=c.pr[c.fav]);
+    $('#ticket').innerHTML=head+(top.length?top.map(c=>{const k=c.fav,qq=c.q[k],r=qq?c.pr[k]*qq:null;
+      return `<div class="tr"><span class="m">${esc(c.f.hn+' – '+c.f.an)}</span>${line('Segno '+LBL[k]+(qq?' @ '+qq.toFixed(2):''),pct(c.pr[k]))}<span class="sub">${state.league==='all'?c.L.name+', ':''}${fmtD(c.f.d).toLowerCase()} ${fmtT(c.f.d)}${r?' · resa '+r.toFixed(2)+(r<1?', paga meno del dovuto':''):''}</span></div>`}).join('')+
+      `<div class="tt">${top.length>=3?line('Prenderne 3 su 3 (le prime)',pct(all3)):''}${top.length>=5?line('Prenderne 5 su 5 (le prime)',pct(all5)):''}</div>
+      <p class="tfoot">Più giocate metti insieme, più è difficile prenderle tutte. Quelle con resa sotto 1 vincono spesso ma nel lungo periodo fanno perdere.</p>`
+      :`<p class="empty">Nessuna partita con dati sufficienti.</p>`);
+  } else
   $('#ticket').innerHTML=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${STYLE[state.style].name} · cassa ${eur(bank)}</small></div>`+
     (picks.length?picks.map(p=>`<div class="tr"><span class="m">${esc(p.m)}</span>${line('Segno '+LBL[p.k]+' @ '+p.q.toFixed(2),eur(p.stake))}<span class="sub">${state.league==='all'?p.lg+', ':''}${fmtD(p.d).toLowerCase()} ${fmtT(p.d)} · prob. ${pct(p.p)} · resa ${p.ev.toFixed(2)}</span></div>`).join('')+
       `<div class="tt">${line('Giocate',picks.length)}${line('Puntata totale',eur(staked))}${line('Vincita se le prendi tutte',eur(pot))}${line('Guadagno atteso','+'+eur(gain),'big')}</div>
       <p class="tfoot">Il guadagno atteso vale sul lungo periodo: una singola giornata può andare sotto.</p>`
     :`<p class="empty">${hasOdds?'Oggi nessuna partita ha abbastanza valore. Non giocare è la scelta giusta, oppure prova la prudenza Aggressivo.':'Mancano le quote. Aggiungi la chiave in Impostazioni o scrivile nel dettaglio di ogni partita.'}</p>`);
-  $('#legend').hidden=!picks.length;
+  $('#legendRed').hidden=!picks.length;
+  document.querySelectorAll('#sort button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.sort));
+  document.querySelectorAll('#tk button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.tk));
+  document.querySelector('.controls').hidden=state.tk==='prob';
   const b=$('#badge');b.textContent=picks.length;b.hidden=!picks.length}
 
 /* eventi */
+$('#sort').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.sort=b.dataset.v;ls.set('sort',state.sort);render();document.querySelector('main').scrollTop=0});
+$('#tk').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.tk=b.dataset.v;ls.set('tk',state.tk);render()});
 function leagues(){$('#leagues').innerHTML=[{id:'all',name:'Tutti'},...LEAGUES].map(L=>`<button class="lg-btn" aria-pressed="${L.id===state.league}" data-id="${L.id}">${L.name}</button>`).join('')}
 $('#leagues').addEventListener('click',e=>{const b=e.target.closest('.lg-btn');if(!b||b.dataset.id===state.league)return;state.league=b.dataset.id;ls.set('lg',state.league);leagues();load()});
 $('#refresh').addEventListener('click',()=>{state.cache={};load(true)});
