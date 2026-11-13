@@ -221,6 +221,7 @@ button.odd:active{transform:scale(.97)}
 .tr .bad{color:#B23A30}
 .clear{border:0;background:none;color:var(--signal);font-weight:600;cursor:pointer;padding:4px 0;align-self:flex-end}
 .hint-sel{font-size:.84rem;color:var(--muted);margin:0}
+.tr .wd{font-weight:700;font-size:.78rem;letter-spacing:.02em;opacity:.85}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -423,6 +424,7 @@ async function load(force){
 /* calcolo giocate */
 const fmtD=d=>{const t=new Date();t.setHours(0,0,0,0);const x=new Date(d);x.setHours(0,0,0,0);const diff=Math.round((x-t)/864e5);
   const s=d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});return diff===0?'Oggi, '+s:diff===1?'Domani, '+s:s.charAt(0).toUpperCase()+s.slice(1)};
+const fmtW=d=>{const s=d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});return s.charAt(0).toUpperCase()+s.slice(1)+', ore '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})};
 const fmtT=d=>d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
 const eur=n=>Math.round(n).toLocaleString('it-IT')+' €';
 const pct=p=>p==null?'–':Math.round(p*100)+'%';
@@ -430,6 +432,8 @@ const LBL={'1':'1','X':'X','2':'2','O':'Over 2,5','U':'Under 2,5'};
 function compute(){
   const manual=ls.get('manual',{}),S=STYLE[state.style],bank=ls.get('bank',1000),W=0.45;
   const rows=[];for(const set of state.sets)for(const f of set.fixtures)rows.push({set,f});rows.sort((x,y)=>x.f.d-y.f.d);
+  const first={};for(const r of rows){const id=r.set.L.id;if(r.f.d>now&&!first[id])first[id]=r.f.d}
+  const isNear=(id,d)=>first[id]&&d>=new Date(now.getTime()-3*3600e3)&&d<new Date(first[id].getTime()+4*864e5);
   const cards=[],picks=[];
   rows.forEach(({set,f},idx)=>{const {M,L}=set;
     const key=L.id+'|'+f.d.toISOString().slice(0,10)+'|'+norm(f.hn).join('')+'|'+norm(f.an).join('');
@@ -440,9 +444,9 @@ function compute(){
     const pr={};if(P){pr['1']=mk?W*P.p1+(1-W)*mk['1']:P.p1;pr.X=mk?W*P.px+(1-W)*mk.X:P.px;pr['2']=mk?W*P.p2+(1-W)*mk['2']:P.p2;pr.O=mo?W*P.ov+(1-W)*mo.O:P.ov;pr.U=1-pr.O}
     const ev={};for(const k in pr)if(q[k])ev[k]=pr[k]*q[k];
     let best=null;for(const k of ['1','X','2','O','U'])if(ev[k]&&ev[k]>=1+S.edge&&pr[k]>=0.15&&(!best||ev[k]>ev[best]))best=k;
-    let pick=null;if(best){const kelly=(pr[best]*q[best]-1)/(q[best]-1);pick={k:best,m:f.hn+' – '+f.an,lg:L.name,d:f.d,p:pr[best],q:q[best],ev:ev[best],frac:Math.min(0.05,kelly*S.kf)};picks.push(pick)}
+    const near=isNear(L.id,f.d);let pick=null;if(best&&near){const kelly=(pr[best]*q[best]-1)/(q[best]-1);pick={k:best,m:f.hn+' – '+f.an,lg:L.name,d:f.d,p:pr[best],q:q[best],ev:ev[best],frac:Math.min(0.05,kelly*S.kf)};picks.push(pick)}
     let fav=null;if(pr['1']!=null)for(const k of ['1','X','2'])if(!fav||pr[k]>pr[fav])fav=k;
-    cards.push({f,L,idx,key,P,pr,q,ev,mk,pick,man,fav})});
+    cards.push({f,L,idx,key,P,pr,q,ev,mk,pick,man,fav,near})});
   const tot=picks.reduce((s,p)=>s+p.frac,0),scale=tot>0.25?0.25/tot:1;picks.forEach(p=>{p.stake=Math.max(1,Math.round(bank*p.frac*scale))});
   return {cards,picks,bank}}
 
@@ -497,9 +501,9 @@ function render(){
         if(r&&r>1){sug=Math.max(1,Math.round(bank*Math.min(0.05,(r-1)/(x.q-1)*STYLE[state.style].kf)))}
         const st=stakes[x.key]!=null?stakes[x.key]:(sug||10);
         if(r){tot+=st;win+=st*x.q;gain+=st*(r-1);none*=1-x.p;allp*=x.p}
-        return `<div class="tr" data-key="${esc(x.key)}"><span class="m">${esc(x.m)}</span>
+        return `<div class="tr" data-key="${esc(x.key)}"><span class="wd">${fmtW(x.d)}</span><span class="m">${esc(x.m)}</span>
           <div class="l"><span>Segno ${LBL[x.k]}${x.q?' @ '+x.q.toFixed(2):''}</span><span class="dots"></span><input class="stake-in" type="text" inputmode="numeric" id="st_${esc(x.key)}" data-key="${esc(x.key)}" value="${st}" aria-label="Puntata in euro"><span>€</span></div>
-          <span class="sub">${x.lg}, ${fmtD(x.d).toLowerCase()} ${fmtT(x.d)}${x.p!=null?' · prob. '+pct(x.p):''}${r?' · resa '+r.toFixed(2):''}</span>
+          <span class="sub">${x.lg}${x.p!=null?' · prob. '+pct(x.p):''}${r?' · resa '+r.toFixed(2):''}</span>
           ${!x.q?'<span class="sub bad">Manca la quota: scrivila nel dettaglio della partita.</span>':r<1?`<span class="sub bad">Resa sotto 1: in media ti fa perdere.</span>`:`<span class="sub">Puntata consigliata: ${eur(sug)}</span>`}
           <button class="rm" data-key="${esc(x.key)}">Togli</button></div>`}).join('')+
         (ok.length?`<div class="tt">${line('Partite',ok.length+(miss?' (+'+miss+' senza quota)':''))}${line('Puntata totale',eur(tot))}${line('Vincita se le prendi tutte',eur(win))}${line('Almeno una vinta',pct(1-none))}${line('Tutte vinte',pct(allp))}${line('Guadagno atteso',(gain>=0?'+':'−')+eur(Math.abs(gain)),'big')}</div>`:'');
@@ -507,7 +511,7 @@ function render(){
       const Q=ok.reduce((a,x)=>a*x.q,1),Pp=ok.reduce((a,x)=>a*x.p,1),R=Q*Pp;
       const sug=R>1&&Q>1?Math.max(1,Math.round(bank*Math.min(0.02,(R-1)/(Q-1)*STYLE[state.style].kf))):0;
       const st=ls.get('multiStake',sug||10);
-      body=mine.map(x=>`<div class="tr" data-key="${esc(x.key)}"><span class="m">${esc(x.m)}</span>${line('Segno '+LBL[x.k],x.q?x.q.toFixed(2):'—')}<span class="sub">${x.lg}, ${fmtD(x.d).toLowerCase()} ${fmtT(x.d)}${x.p!=null?' · prob. '+pct(x.p):''}</span>${!x.q?'<span class="sub bad">Manca la quota: esclusa dal calcolo.</span>':''}<button class="rm" data-key="${esc(x.key)}">Togli</button></div>`).join('')+
+      body=mine.map(x=>`<div class="tr" data-key="${esc(x.key)}"><span class="wd">${fmtW(x.d)}</span><span class="m">${esc(x.m)}</span>${line('Segno '+LBL[x.k],x.q?x.q.toFixed(2):'—')}<span class="sub">${x.lg}${x.p!=null?' · prob. '+pct(x.p):''}</span>${!x.q?'<span class="sub bad">Manca la quota: esclusa dal calcolo.</span>':''}<button class="rm" data-key="${esc(x.key)}">Togli</button></div>`).join('')+
         (ok.length?`<div class="tt">${line('Quota totale',Q.toFixed(2))}${line('Probabilità di prenderla',pct(Pp))}${line('Resa',R.toFixed(2))}
           <div class="l"><span>Puntata</span><span class="dots"></span><input class="stake-in" type="text" inputmode="numeric" id="multiStake" value="${st}" aria-label="Puntata multipla in euro"><span>€</span></div>
           ${line('Vincita potenziale',eur(st*Q))}${line('Guadagno atteso',(R>=1?'+':'−')+eur(Math.abs(st*(R-1))),'big')}</div>
@@ -516,19 +520,19 @@ function render(){
     $('#ticket').innerHTML=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · Le mie giocate · ${state.mode==='multi'?'multipla':'singole'}</small></div>`+body;
   } else
   if(state.tk==='prob'){
-    const top=cards.filter(c=>c.fav).sort((a,b)=>b.pr[b.fav]-a.pr[a.fav]).slice(0,10);
+    const top=cards.filter(c=>c.fav&&c.near).sort((a,b)=>b.pr[b.fav]-a.pr[a.fav]).slice(0,10);
     let all3=1;top.slice(0,3).forEach(c=>all3*=c.pr[c.fav]);let all5=1;top.slice(0,5).forEach(c=>all5*=c.pr[c.fav]);
     $('#ticket').innerHTML=head+(top.length?top.map(c=>{const k=c.fav,qq=c.q[k],r=qq?c.pr[k]*qq:null;
-      return `<div class="tr"><span class="m">${esc(c.f.hn+' – '+c.f.an)}</span>${line('Segno '+LBL[k]+(qq?' @ '+qq.toFixed(2):''),pct(c.pr[k]))}<span class="sub">${state.league==='all'?c.L.name+', ':''}${fmtD(c.f.d).toLowerCase()} ${fmtT(c.f.d)}${r?' · resa '+r.toFixed(2)+(r<1?', paga meno del dovuto':''):''}</span></div>`}).join('')+
+      return `<div class="tr"><span class="wd">${fmtW(c.f.d)}</span><span class="m">${esc(c.f.hn+' – '+c.f.an)}</span>${line('Segno '+LBL[k]+(qq?' @ '+qq.toFixed(2):''),pct(c.pr[k]))}<span class="sub">${state.league==='all'?c.L.name:''}${r?(state.league==='all'?' · ':'')+'resa '+r.toFixed(2)+(r<1?', paga meno del dovuto':''):''}</span></div>`}).join('')+
       `<div class="tt">${top.length>=3?line('Prenderne 3 su 3 (le prime)',pct(all3)):''}${top.length>=5?line('Prenderne 5 su 5 (le prime)',pct(all5)):''}</div>
       <p class="tfoot">Più giocate metti insieme, più è difficile prenderle tutte. Quelle con resa sotto 1 vincono spesso ma nel lungo periodo fanno perdere.</p>`
       :`<p class="empty">Nessuna partita con dati sufficienti.</p>`);
   } else
   $('#ticket').innerHTML=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${STYLE[state.style].name} · cassa ${eur(bank)}</small></div>`+
-    (picks.length?picks.map(p=>`<div class="tr"><span class="m">${esc(p.m)}</span>${line('Segno '+LBL[p.k]+' @ '+p.q.toFixed(2),eur(p.stake))}<span class="sub">${state.league==='all'?p.lg+', ':''}${fmtD(p.d).toLowerCase()} ${fmtT(p.d)} · prob. ${pct(p.p)} · resa ${p.ev.toFixed(2)}</span></div>`).join('')+
+    (picks.length?picks.map(p=>`<div class="tr"><span class="wd">${fmtW(p.d)}</span><span class="m">${esc(p.m)}</span>${line('Segno '+LBL[p.k]+' @ '+p.q.toFixed(2),eur(p.stake))}<span class="sub">${state.league==='all'?p.lg+' · ':''}prob. ${pct(p.p)} · resa ${p.ev.toFixed(2)}</span></div>`).join('')+
       `<div class="tt">${line('Giocate',picks.length)}${line('Puntata totale',eur(staked))}${line('Vincita se le prendi tutte',eur(pot))}${line('Guadagno atteso','+'+eur(gain),'big')}</div>
       <p class="tfoot">Il guadagno atteso vale sul lungo periodo: una singola giornata può andare sotto.</p>`
-    :`<p class="empty">${hasOdds?'Oggi nessuna partita ha abbastanza valore. Non giocare è la scelta giusta, oppure prova la prudenza Aggressivo.':'Mancano le quote. Aggiungi la chiave in Impostazioni o scrivile nel dettaglio di ogni partita.'}</p>`);
+    :`<p class="empty">${hasOdds?'Nella prossima giornata nessuna partita ha abbastanza valore. Non giocare è la scelta giusta, oppure prova la prudenza Aggressivo.':'Mancano le quote. Aggiungi la chiave in Impostazioni o scrivile nel dettaglio di ogni partita.'}</p>`);
   $('#legendRed').hidden=!picks.length;
   document.querySelectorAll('#sort button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.sort));
   document.querySelectorAll('#tk button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.tk));
