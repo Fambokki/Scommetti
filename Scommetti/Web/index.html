@@ -241,11 +241,59 @@ button.odd:active{transform:scale(.97)}
 .crow .sc{grid-column:3;font-weight:800;font-stretch:75%;font-size:1.15rem;text-align:right}
 .crow .sc.f{color:var(--fav)}
 .crow .ft{grid-column:3;grid-row:1 / span 2;font-size:.75rem;color:var(--muted);text-align:right}
+/* schermata iniziale: sempre scura, come il campo la sera */
+.splash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+  padding:calc(24px + env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px));
+  background:#0B1220;color:#F2F5F8;overflow:hidden;transition:opacity .5s ease,transform .5s ease;cursor:pointer}
+.splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
+.splash .sb{position:absolute;border-radius:50%;filter:blur(70px)}
+.splash .sb.a{width:80vmax;height:80vmax;left:-35vmax;top:-30vmax;background:#1F8A57;opacity:.75}
+.splash .sb.b{width:70vmax;height:70vmax;right:-35vmax;bottom:-25vmax;background:#D9431F;opacity:.7}
+.splash .sb.c{width:45vmax;height:45vmax;right:-10vmax;top:-10vmax;background:#2F5FD0;opacity:.5}
+.splash .tile{position:relative;width:min(58vw,240px);aspect-ratio:1;border-radius:28%;display:grid;place-items:center;
+  background:rgba(255,255,255,.12);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+  border:1.5px solid rgba(255,255,255,.45);box-shadow:inset 0 2px 0 rgba(255,255,255,.5),0 30px 60px -20px rgba(0,0,0,.6)}
+.splash .tile b{font-weight:800;font-stretch:68%;font-size:min(22vw,92px);letter-spacing:-.02em;line-height:1}
+.splash .tile i{position:absolute;bottom:22%;left:32%;right:32%;height:6px;border-radius:3px;background:#FF6B4A}
+.splash h1{margin:0;font-weight:800;font-stretch:72%;font-size:2.6rem;line-height:1}
+.splash .tag{margin:-14px 0 0;opacity:.75;font-size:.95rem}
+.splash .next{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:5.6em;text-align:center}
+.splash .next small{opacity:.7;font-size:.82rem}
+.splash .next .mt{font-weight:600;font-size:1rem;max-width:30ch}
+.splash .next .cd{font-weight:800;font-stretch:72%;font-size:2rem;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.splash .tap{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom,0px));font-size:.8rem;opacity:.6}
+.splash .ld{width:120px;height:3px;border-radius:2px;background:rgba(255,255,255,.18);overflow:hidden}
+.splash .ld::after{content:"";display:block;width:40%;height:100%;background:#fff;border-radius:2px;animation:ld 1.1s ease-in-out infinite}
+@keyframes ld{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+@media (prefers-reduced-motion:no-preference){
+  .splash .tile{animation:pop .7s cubic-bezier(.2,.9,.25,1.2) both}
+  .splash h1{animation:rise .6s .25s ease both}.splash .tag{animation:rise .6s .35s ease both}
+  .splash .sb.a{animation:drift 9s ease-in-out infinite alternate}.splash .sb.b{animation:drift 11s ease-in-out infinite alternate-reverse}}
+@keyframes pop{from{transform:scale(.6) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes rise{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+/* countdown in Partite */
+.countdown{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:end;padding:14px 16px;border-radius:22px;
+  background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-hi),0 10px 30px -12px var(--glass-shade)}
+.countdown small{font-size:.8rem;color:var(--muted);font-weight:600}
+.countdown small,.countdown .mt{grid-column:1 / -1}
+.countdown .mt{font-weight:700;font-size:1.05rem;min-width:0;overflow-wrap:anywhere}
+.countdown .wh{font-size:.84rem;color:var(--muted);text-align:right;padding-bottom:5px}
+.countdown .cd{white-space:nowrap;font-weight:800;font-stretch:72%;font-size:2.1rem;line-height:1;font-variant-numeric:tabular-nums;color:var(--signal)}
+.countdown .u{font-size:.7rem;font-weight:600;color:var(--muted);display:block;text-align:right;letter-spacing:.02em}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<div class="splash" id="splash" role="dialog" aria-label="Scommetti">
+  <span class="sb a"></span><span class="sb b"></span><span class="sb c"></span>
+  <div class="tile"><b>1X2</b><i></i></div>
+  <h1>Scommetti</h1>
+  <p class="tag">I pronostici per battere i tuoi amici</p>
+  <div class="next" id="splashNext"><div class="ld" aria-label="Caricamento"></div></div>
+  <span class="tap">Tocca per entrare</span>
+</div>
 
 <header class="top">
   <div class="brand">
@@ -257,6 +305,7 @@ button.odd:active{transform:scale(.97)}
 
 <main>
   <section class="view" id="v-partite">
+    <div class="countdown" id="cdBox" hidden><small id="cdLabel">Prossima partita</small><span class="mt" id="cdMatch"></span><span class="cd" id="cdTime">--:--:--</span><span class="wh" id="cdWhen"></span></div>
     <div class="status" id="status">Caricamento dati…</div>
     <p class="hint-sel">Tocca un segno (1, X o 2) per aggiungerlo alle tue giocate. Il calcolo lo trovi in Schedina, alla voce Le mie.</p>
     <div class="toolbar"><div class="seg sm" id="sort" role="group" aria-label="Ordina partite"><button data-v="time">Per orario</button><button data-v="prob">Più probabili</button></div></div>
@@ -464,7 +513,7 @@ async function load(force){
   const sets=[],errs=[];for(const L of ids){try{sets.push(await loadLeague(L,force))}catch(e){errs.push(L.name)}}
   $('#refresh').classList.remove('spin');
   if(!sets.length){$('#status').innerHTML='<span class="warn">Non riesco a scaricare i risultati. Controlla la connessione e tocca Aggiorna.</span>';$('#list').innerHTML='';return}
-  state.sets=sets;
+  state.sets=sets;setTimeout(()=>window.__dataReady&&window.__dataReady(),0);
   const books=new Map();sets.forEach(x=>x.books.forEach((t,k)=>books.set(k,t)));
   $('#book').innerHTML='<option value="median">Mediana bookmaker</option>'+[...books].sort((a,b)=>a[1].localeCompare(b[1])).map(([k,t])=>`<option value="${esc(k)}">${esc(t)}</option>`).join('');
   if(!books.has(state.book))state.book='median';$('#book').value=state.book;
@@ -670,6 +719,34 @@ $('#icons').addEventListener('click',async e=>{const b=e.target.closest('.ico');
   try{curIcon=await iconNat.postMessage({set:b.dataset.id});drawIcons();$('#iconMsg').textContent='Icona cambiata.'}catch(err){$('#iconMsg').textContent='Non è stato possibile cambiare icona: '+(err&&err.message||err)}});
 if(iconNat)iconNat.postMessage({}).then(v=>{curIcon=v||'default';drawIcons()}).catch(()=>{});
 drawIcons();
+/* countdown alla prossima partita, aggiornato ogni secondo */
+function nextMatch(){let best=null;const t=Date.now();
+  for(const set of state.sets)for(const f of set.fixtures)if(f.d.getTime()>t&&(!best||f.d<best.f.d))best={f,L:set.L};
+  return best}
+const two=n=>String(n).padStart(2,'0');
+function cdText(ms){const s=Math.max(0,Math.floor(ms/1000)),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=s%60;
+  return (d?d+'g ':'')+two(h)+':'+two(m)+':'+two(x)}
+let nm=null;
+function tick(){
+  if(!nm||nm.f.d.getTime()<=Date.now())nm=nextMatch();
+  const box=$('#cdBox');
+  if(!nm){box.hidden=true;return}
+  const ms=nm.f.d-Date.now(),txt=cdText(ms),who=nm.f.hn+' – '+nm.f.an;
+  box.hidden=false;$('#cdTime').textContent=txt;$('#cdMatch').textContent=who;
+  $('#cdLabel').textContent='Prossima partita · '+nm.L.name;$('#cdWhen').textContent=nm.f.d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})+', '+fmtT(nm.f.d);
+  const sp=$('#splashNext');
+  if(sp&&!sp.dataset.on){sp.dataset.on='1';sp.innerHTML='<small>Prossima partita</small><span class="mt"></span><span class="cd"></span>'}
+  if(sp){sp.querySelector('.mt').textContent=who;sp.querySelector('.cd').textContent=txt}}
+setInterval(tick,1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){nm=null;tick()}});
+
+/* schermata iniziale: resta almeno 2,5 secondi e fino al caricamento dei dati; un tocco la chiude */
+const splashStart=Date.now();let splashDone=false;
+function closeSplash(){if(splashDone)return;splashDone=true;const sp=$('#splash');sp.classList.add('out');setTimeout(()=>sp.remove(),600)}
+$('#splash').addEventListener('click',closeSplash);
+window.__dataReady=()=>{nm=null;tick();const wait=Math.max(0,3200-(Date.now()-splashStart));setTimeout(closeSplash,wait)};
+setTimeout(closeSplash,12000);
+
 segSync();leagues();load();
 })();
 </script>
