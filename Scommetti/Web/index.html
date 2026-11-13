@@ -121,7 +121,7 @@ main{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-lef
 
 /* barra schede */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:color-mix(in srgb,var(--card) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);
-  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);display:grid;grid-template-columns:repeat(3,1fr)}
+  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);display:grid;grid-template-columns:repeat(4,1fr)}
 .tabbar button{border:0;background:none;height:var(--tab-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.72rem;font-weight:600;color:var(--muted);cursor:pointer;position:relative}
 .tabbar svg{width:22px;height:22px}
 .tabbar button[aria-current="page"]{color:var(--signal)}
@@ -222,6 +222,25 @@ button.odd:active{transform:scale(.97)}
 .clear{border:0;background:none;color:var(--signal);font-weight:600;cursor:pointer;padding:4px 0;align-self:flex-end}
 .hint-sel{font-size:.84rem;color:var(--muted);margin:0}
 .tr .wd{font-weight:700;font-size:.78rem;letter-spacing:.02em;opacity:.85}
+.cal-head{display:flex;justify-content:space-between;align-items:baseline}
+.cal-head .day{margin:4px 0 0}
+.days{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px;scroll-snap-type:x proximity}
+.days::-webkit-scrollbar{display:none}
+.dbtn{flex:none;width:52px;border:1px solid var(--glass-edge);background:var(--fill);border-radius:16px;padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;scroll-snap-align:start;color:var(--muted)}
+.dbtn b{font-weight:800;font-stretch:75%;font-size:1.25rem;color:var(--ink);line-height:1}
+.dbtn small{font-size:.7rem;font-weight:600;text-transform:capitalize}
+.dbtn i{width:5px;height:5px;border-radius:50%;background:transparent}
+.dbtn.has i{background:var(--signal)}
+.dbtn.today small{color:var(--signal)}
+.dbtn[aria-selected="true"]{background:var(--glass-strong);border-color:var(--ink);box-shadow:inset 0 1px 0 var(--glass-hi),0 4px 14px -6px var(--glass-shade)}
+.dbtn:disabled{opacity:.35;cursor:default}
+.cal-lg{font-weight:700;font-size:.9rem;margin:10px 0 0;display:flex;justify-content:space-between;color:var(--muted)}
+.crow{display:grid;grid-template-columns:3.2rem 1fr auto;gap:2px 10px;align-items:center;padding:11px 14px;border-radius:18px;background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-hi)}
+.crow .t{grid-row:1 / span 2;font-weight:700;font-stretch:75%;font-size:1.05rem;color:var(--muted)}
+.crow .tm{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .sc{grid-column:3;font-weight:800;font-stretch:75%;font-size:1.15rem;text-align:right}
+.crow .sc.f{color:var(--fav)}
+.crow .ft{grid-column:3;grid-row:1 / span 2;font-size:.75rem;color:var(--muted);text-align:right}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -243,6 +262,12 @@ button.odd:active{transform:scale(.97)}
     <div class="toolbar"><div class="seg sm" id="sort" role="group" aria-label="Ordina partite"><button data-v="time">Per orario</button><button data-v="prob">Più probabili</button></div></div>
     <div class="legend" id="legend"><span class="r"><span class="dot g"></span>Verde: il risultato più probabile della partita.</span><span class="r" id="legendRed" hidden><span class="dot"></span>Rosso: giocata con valore, la quota paga più del dovuto. Sotto trovi quanto puntare.</span></div>
     <div id="list" class="view"></div>
+  </section>
+
+  <section class="view" id="v-cal" hidden>
+    <div class="cal-head"><h2 class="day" id="calMonth">Calendario</h2><button class="clear" id="calToday">Oggi</button></div>
+    <div class="days" id="days" role="tablist" aria-label="Giorni"></div>
+    <div id="calList" class="view"></div>
   </section>
 
   <section class="view" id="v-schedina" hidden>
@@ -296,6 +321,7 @@ button.odd:active{transform:scale(.97)}
 <div class="fade-bottom" aria-hidden="true"></div>
 <nav class="tabbar" id="tabbar" aria-label="Sezioni">
   <button data-v="partite" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7l4.3 3.1-1.6 5H9.3l-1.6-5z"/></svg>Partite</button>
+  <button data-v="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendario</button>
   <button data-v="schedina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Schedina<span class="badge" id="badge" hidden>0</span></button>
   <button data-v="imp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Impostazioni</button>
 </nav>
@@ -339,8 +365,8 @@ async function loadOpenfootball(L){
   const res=[],fix=[];let lastDate=null;
   for(const y of [curStart-1,curStart]){let d;try{d=await getJSON(`https://raw.githubusercontent.com/openfootball/football.json/master/${sName(y)}/${L.of}.json`)}catch(e){continue}
     for(const m of d.matches||[]){if(!m||!m.team1)continue;const dt=new Date(m.date+'T'+(m.time||'15:00'));const ft=m.score&&m.score.ft;
-      if(ft&&ft.length==2){res.push({h:m.team1,a:m.team2,hg:ft[0],ag:ft[1],d:dt});if(!lastDate||dt>lastDate)lastDate=dt}
-      else if(y==curStart&&dt>=new Date(now.getTime()-3*3600e3))fix.push({h:m.team1,a:m.team2,d:dt})}}
+      if(ft&&ft.length==2){res.push({h:m.team1,a:m.team2,hg:ft[0],ag:ft[1],d:dt,md:(String(m.round||'').match(/\d+/)||[])[0]});if(!lastDate||dt>lastDate)lastDate=dt}
+      else if(y==curStart&&dt>=new Date(now.getTime()-3*3600e3))fix.push({h:m.team1,a:m.team2,d:dt,md:(String(m.round||'').match(/\d+/)||[])[0]})}}
   return {res,fix,src:'openfootball',lastDate}}
 const SHORT={};
 const show=(t,fb)=>t?(SHORT[t]||t):fb;
@@ -349,8 +375,8 @@ async function loadFD(L,key){
   for(const y of [curStart-1,curStart]){let d;try{d=await getJSON(`https://api.football-data.org/v4/competitions/${L.fd}/matches?season=${y}`,{headers:{'X-Auth-Token':key}})}catch(e){if(y==curStart)throw e;continue}
     for(const m of d.matches||[]){const dt=new Date(m.utcDate);const h=m.homeTeam&&m.homeTeam.name,a=m.awayTeam&&m.awayTeam.name;if(!h||!a)continue;const ft=m.score&&m.score.fullTime;
       if(m.homeTeam.shortName)SHORT[h]=m.homeTeam.shortName;if(m.awayTeam.shortName)SHORT[a]=m.awayTeam.shortName;
-      if(m.status==='FINISHED'&&ft&&ft.home!=null){res.push({h,a,hg:ft.home,ag:ft.away,d:dt});if(!lastDate||dt>lastDate)lastDate=dt}
-      else if(['SCHEDULED','TIMED'].includes(m.status))fix.push({h,a,d:dt})}}
+      if(m.status==='FINISHED'&&ft&&ft.home!=null){res.push({h,a,hg:ft.home,ag:ft.away,d:dt,md:m.matchday});if(!lastDate||dt>lastDate)lastDate=dt}
+      else if(['SCHEDULED','TIMED'].includes(m.status))fix.push({h,a,d:dt,md:m.matchday})}}
   return {res,fix,src:'football-data.org',lastDate}}
 async function loadOdds(L,key,force){
   const ck='odds_'+L.id,c=ls.get(ck,null);if(!force&&c&&Date.now()-c.t<30*60e3)return c.v;
@@ -541,6 +567,7 @@ function render(){
       `<div class="tt">${line('Giocate',picks.length)}${line('Puntata totale',eur(staked))}${line('Vincita se le prendi tutte',eur(pot))}${line('Guadagno atteso','+'+eur(gain),'big')}</div>
       <p class="tfoot">Il guadagno atteso vale sul lungo periodo: una singola giornata può andare sotto.</p>`
     :`<p class="empty">${hasOdds?'Nella prossima giornata nessuna partita ha abbastanza valore. Non giocare è la scelta giusta, oppure prova la prudenza Aggressivo.':'Mancano le quote. Aggiungi la chiave in Impostazioni o scrivile nel dettaglio di ogni partita.'}</p>`);
+  if(state.view==='cal')renderCal();
   $('#legendRed').hidden=!picks.length;
   document.querySelectorAll('#sort button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.sort));
   document.querySelectorAll('#tk button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.tk));
@@ -548,6 +575,34 @@ function render(){
   $('#mineCtl').hidden=state.tk!=='mine';$('#clearSel').hidden=state.tk!=='mine'||!mine.length;
   document.querySelectorAll('#mode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.mode));
   const n=mine.length||picks.length;const b=$('#badge');b.textContent=n;b.hidden=!n}
+
+/* calendario */
+const dk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function calEvents(){const ev=[];
+  for(const set of state.sets){const L=set.L;
+    for(const m of set.base.res)ev.push({d:m.d,h:show(m.h),a:show(m.a),hg:m.hg,ag:m.ag,lg:L.name,md:m.md,done:true});
+    for(const m of set.base.fix)ev.push({d:m.d,h:show(m.h),a:show(m.a),lg:L.name,md:m.md})}
+  return ev}
+function renderCal(){
+  if(!state.sets.length){$('#calList').innerHTML='<p class="empty">Caricamento del calendario…</p>';return}
+  const ev=calEvents(),by={};for(const e of ev){const k=dk(e.d);(by[k]=by[k]||[]).push(e)}
+  const t0=new Date();t0.setHours(0,0,0,0);
+  if(!state.calDay){let d=new Date(t0);for(let i=0;i<60;i++){if(by[dk(d)])break;d.setDate(d.getDate()+1)}state.calDay=by[dk(d)]?dk(d):dk(t0)}
+  const days=[];for(let i=-14;i<=60;i++){const d=new Date(t0);d.setDate(d.getDate()+i);days.push(d)}
+  $('#days').innerHTML=days.map(d=>{const k=dk(d);return `<button class="dbtn${by[k]?' has':''}${k===dk(t0)?' today':''}" role="tab" aria-selected="${k===state.calDay}" data-d="${k}"><small>${d.toLocaleDateString('it-IT',{weekday:'short'}).replace('.','')}</small><b>${d.getDate()}</b><i></i></button>`}).join('');
+  const sel=new Date(state.calDay+'T12:00');
+  $('#calMonth').textContent=fmtD(sel);
+  const list=(by[state.calDay]||[]).sort((a,b)=>a.d-b.d||a.lg.localeCompare(b.lg));
+  if(!list.length){$('#calList').innerHTML='<p class="empty">Nessuna partita in questo giorno.</p>'}
+  else{const out=[];let lg='';
+    for(const e of list.slice().sort((a,b)=>a.lg.localeCompare(b.lg)||a.d-b.d)){
+      if(e.lg!==lg){lg=e.lg;out.push(`<h3 class="cal-lg"><span>${e.lg}</span><span>${e.md?'Giornata '+e.md:''}</span></h3>`)}
+      out.push(e.done?`<div class="crow"><span class="t num">${fmtT(e.d)}</span><span class="tm">${esc(e.h)}</span><span class="sc num${e.hg>e.ag?' f':''}">${e.hg}</span><span class="tm">${esc(e.a)}</span><span class="sc num${e.ag>e.hg?' f':''}">${e.ag}</span></div>`
+        :`<div class="crow"><span class="t num">${fmtT(e.d)}</span><span class="tm">${esc(e.h)}</span><span class="ft">${e.d<new Date()?'In corso':'Da giocare'}</span><span class="tm">${esc(e.a)}</span></div>`)}
+    $('#calList').innerHTML=out.join('')}
+  const b=$('#days').querySelector('[aria-selected="true"]');if(b)b.scrollIntoView({inline:'center',block:'nearest'})}
+$('#days').addEventListener('click',e=>{const b=e.target.closest('.dbtn');if(!b)return;state.calDay=b.dataset.d;renderCal()});
+$('#calToday').addEventListener('click',()=>{state.calDay=dk(new Date());renderCal()});
 
 /* eventi */
 $('#sort').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.sort=b.dataset.v;ls.set('sort',state.sort);render();document.querySelector('main').scrollTop=0});
@@ -558,7 +613,7 @@ $('#refresh').addEventListener('click',()=>{state.cache={};load(true)});
 $('#tabbar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.view=b.dataset.v;
   document.querySelectorAll('#tabbar button').forEach(x=>x.toggleAttribute('aria-current',x===b));
   document.querySelectorAll('#tabbar button[aria-current]').forEach(x=>x.setAttribute('aria-current','page'));
-  ['partite','schedina','imp'].forEach(v=>$('#v-'+v).hidden=v!==state.view);document.querySelector('main').scrollTop=0});
+  ['partite','cal','schedina','imp'].forEach(v=>$('#v-'+v).hidden=v!==state.view);if(state.view==='cal')renderCal();document.querySelector('main').scrollTop=0});
 $('#list').addEventListener('click',e=>{const o=e.target.closest('button.odd');if(!o)return;const key=o.closest('.match').dataset.key,k=o.dataset.k;
   if(state.sel[key]&&state.sel[key].k===k)delete state.sel[key];else state.sel[key]={k,d:new Date().toISOString()};
   const sc=document.querySelector('main').scrollTop;render();document.querySelector('main').scrollTop=sc});
