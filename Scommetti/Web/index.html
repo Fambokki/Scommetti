@@ -210,6 +210,17 @@ main>.view{max-width:680px;margin:0 auto}
 .seg.sm{display:inline-grid;grid-template-columns:repeat(2,auto)}
 .seg.sm button{padding:6px 14px}
 .when{font-size:.75rem;color:var(--muted);grid-column:3;grid-row:1;text-align:right}
+button.odd{appearance:none;-webkit-appearance:none;font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+button.odd:active{transform:scale(.97)}
+.odd.sel{border-color:var(--ink);border-width:2px;padding:6px 9px 8px}
+.odd .chk{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-size:.7rem;font-weight:800}
+.mine{display:flex;flex-direction:column;gap:10px}
+.mine .seg{grid-template-columns:1fr 1fr}
+.stake-in{width:6.5em;font:700 .9rem var(--ticket);font-variant-numeric:tabular-nums;text-align:right;color:var(--paper-ink);background:transparent;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:6px;padding:4px 6px}
+.tr .rm{border:0;background:none;color:inherit;opacity:.6;font:inherit;font-size:.8rem;text-decoration:underline;cursor:pointer;padding:0;align-self:flex-start}
+.tr .bad{color:#B23A30}
+.clear{border:0;background:none;color:var(--signal);font-weight:600;cursor:pointer;padding:4px 0;align-self:flex-end}
+.hint-sel{font-size:.84rem;color:var(--muted);margin:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -227,6 +238,7 @@ main>.view{max-width:680px;margin:0 auto}
 <main>
   <section class="view" id="v-partite">
     <div class="status" id="status">Caricamento dati…</div>
+    <p class="hint-sel">Tocca un segno (1, X o 2) per aggiungerlo alle tue giocate. Il calcolo lo trovi in Schedina, alla voce Le mie.</p>
     <div class="toolbar"><div class="seg sm" id="sort" role="group" aria-label="Ordina partite"><button data-v="time">Per orario</button><button data-v="prob">Più probabili</button></div></div>
     <div class="legend" id="legend"><span class="r"><span class="dot g"></span>Verde: il risultato più probabile della partita.</span><span class="r" id="legendRed" hidden><span class="dot"></span>Rosso: giocata con valore, la quota paga più del dovuto. Sotto trovi quanto puntare.</span></div>
     <div id="list" class="view"></div>
@@ -244,8 +256,10 @@ main>.view{max-width:680px;margin:0 auto}
         </div>
       </div>
     </div>
-    <div class="seg" id="tk" role="group" aria-label="Tipo di schedina" style="grid-template-columns:1fr 1fr"><button data-v="value">Con valore</button><button data-v="prob">Più probabili</button></div>
+    <div class="seg" id="tk" role="group" aria-label="Tipo di schedina" style="grid-template-columns:1fr 1fr 1fr"><button data-v="mine">Le mie</button><button data-v="value">Con valore</button><button data-v="prob">Più probabili</button></div>
+    <div class="mine" id="mineCtl" hidden><div class="seg" id="mode" role="group" aria-label="Tipo di giocata"><button data-v="single">Singole</button><button data-v="multi">Multipla</button></div></div>
     <div class="ticket" id="ticket"></div>
+    <button class="clear" id="clearSel" hidden>Svuota le mie giocate</button>
   </section>
 
   <section class="view" id="v-imp" hidden>
@@ -297,7 +311,7 @@ const LEAGUES=[
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const $=s=>document.querySelector(s);
 const STYLE={p:{edge:0.05,kf:0.25,name:'Prudente'},e:{edge:0.03,kf:1/3,name:'Equilibrato'},a:{edge:0.015,kf:0.5,name:'Aggressivo'}};
-const state={sort:ls.get('sort','time'),tk:ls.get('tk','value'),league:ls.get('lg','all'),style:ls.get('style','e'),book:'median',sets:[],cache:{},open:new Set(),view:'partite'};
+const state={sel:ls.get('sel',{}),mode:ls.get('mode','single'),sort:ls.get('sort','time'),tk:ls.get('tk','value'),league:ls.get('lg','all'),style:ls.get('style','e'),book:'median',sets:[],cache:{},open:new Set(),view:'partite'};
 if(!STYLE[state.style])state.style='e';
 $('#bank').value=ls.get('bank',1000);$('#kOdds').value=ls.get('kOdds','');$('#kFd').value=ls.get('kFd','');
 
@@ -442,9 +456,11 @@ function render(){
   for(const c of list){const {f,L,idx,key,P,pr,q,ev,mk,pick,man,fav}=c;
     const day=fmtD(f.d);if(!byProb&&day!==lastDay){out.push(`<h2 class="day">${day}</h2>`);lastDay=day}
     const open=state.open.has(key);
-    const cell=k=>{const isV=pick&&pick.k===k,isF=fav===k;return `<div class="odd${isV?' value':''}${isF?' fav':''}"><div class="sg"><span>${k}</span><span>${pct(pr[k])}</span></div>
+    const cell=k=>{const isV=pick&&pick.k===k,isF=fav===k,isS=state.sel[key]&&state.sel[key].k===k;
+      if(isS)Object.assign(state.sel[key],{m:f.hn+' – '+f.an,lg:L.name,d:f.d.toISOString(),p:pr[k]??null,q:q[k]||null});
+      return `<button class="odd${isV?' value':''}${isF?' fav':''}${isS?' sel':''}" data-k="${k}" aria-pressed="${!!isS}" aria-label="Segno ${k}">${isS?'<span class="chk">✓</span>':''}<div class="sg"><span>${k}</span><span>${pct(pr[k])}</span></div>
       <div class="q num${q[k]?'':' none'}">${q[k]?q[k].toFixed(2):'—'}</div>${isF?`<div class="flag f">Più probabile</div>`:''}${isV?`<div class="flag">Valore · ${eur(pick.stake)}</div>`:''}
-      ${pr[k]!=null?`<div class="meter" style="width:${(pr[k]*100).toFixed(1)}%"></div>`:''}</div>`};
+      ${pr[k]!=null?`<div class="meter" style="width:${(pr[k]*100).toFixed(1)}%"></div>`:''}</button>`};
     const ouPick=pick&&(pick.k==='O'||pick.k==='U');
     out.push(`<article class="match${open?' open':''}" data-key="${esc(key)}">
       <button class="mhead" aria-expanded="${open}"><span class="time num">${fmtT(f.d)}</span><span class="team">${esc(f.hn)}</span>${byProb?`<span class="when">${f.d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric'})}${all?' · '+L.name:''}</span>`:all?`<span class="lgname">${L.name}</span>`:''}<span class="team">${esc(f.an)}</span>${CHEV}</button>
@@ -469,6 +485,36 @@ function render(){
   const hasOdds=cards.some(c=>c.q['1']);
   const line=(a,b,cls='')=>`<div class="l ${cls}"><span>${a}</span><span class="dots"></span><span class="num">${b}</span></div>`;
   const head=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${state.tk==='prob'?'Più probabili':STYLE[state.style].name+' · cassa '+eur(bank)}</small></div>`;
+  ls.set('sel',state.sel);
+  const mine=Object.entries(state.sel).map(([key,v])=>({key,...v,d:new Date(v.d)})).sort((a,b)=>a.d-b.d);
+  if(state.tk==='mine'){
+    const ok=mine.filter(x=>x.q&&x.p!=null),miss=mine.length-ok.length,stakes=ls.get('stakes',{});
+    let body='';
+    if(!mine.length)body=`<p class="empty">Nessuna partita scelta. Vai in Partite e tocca il segno che vuoi giocare.</p>`;
+    else if(state.mode==='single'){
+      let tot=0,win=0,gain=0,none=1,allp=1;
+      body=mine.map(x=>{const r=x.q&&x.p!=null?x.p*x.q:null;let sug=0;
+        if(r&&r>1){sug=Math.max(1,Math.round(bank*Math.min(0.05,(r-1)/(x.q-1)*STYLE[state.style].kf)))}
+        const st=stakes[x.key]!=null?stakes[x.key]:(sug||10);
+        if(r){tot+=st;win+=st*x.q;gain+=st*(r-1);none*=1-x.p;allp*=x.p}
+        return `<div class="tr" data-key="${esc(x.key)}"><span class="m">${esc(x.m)}</span>
+          <div class="l"><span>Segno ${LBL[x.k]}${x.q?' @ '+x.q.toFixed(2):''}</span><span class="dots"></span><input class="stake-in" type="text" inputmode="numeric" id="st_${esc(x.key)}" data-key="${esc(x.key)}" value="${st}" aria-label="Puntata in euro"><span>€</span></div>
+          <span class="sub">${x.lg}, ${fmtD(x.d).toLowerCase()} ${fmtT(x.d)}${x.p!=null?' · prob. '+pct(x.p):''}${r?' · resa '+r.toFixed(2):''}</span>
+          ${!x.q?'<span class="sub bad">Manca la quota: scrivila nel dettaglio della partita.</span>':r<1?`<span class="sub bad">Resa sotto 1: in media ti fa perdere.</span>`:`<span class="sub">Puntata consigliata: ${eur(sug)}</span>`}
+          <button class="rm" data-key="${esc(x.key)}">Togli</button></div>`}).join('')+
+        (ok.length?`<div class="tt">${line('Partite',ok.length+(miss?' (+'+miss+' senza quota)':''))}${line('Puntata totale',eur(tot))}${line('Vincita se le prendi tutte',eur(win))}${line('Almeno una vinta',pct(1-none))}${line('Tutte vinte',pct(allp))}${line('Guadagno atteso',(gain>=0?'+':'−')+eur(Math.abs(gain)),'big')}</div>`:'');
+    }else{
+      const Q=ok.reduce((a,x)=>a*x.q,1),Pp=ok.reduce((a,x)=>a*x.p,1),R=Q*Pp;
+      const sug=R>1&&Q>1?Math.max(1,Math.round(bank*Math.min(0.02,(R-1)/(Q-1)*STYLE[state.style].kf))):0;
+      const st=ls.get('multiStake',sug||10);
+      body=mine.map(x=>`<div class="tr" data-key="${esc(x.key)}"><span class="m">${esc(x.m)}</span>${line('Segno '+LBL[x.k],x.q?x.q.toFixed(2):'—')}<span class="sub">${x.lg}, ${fmtD(x.d).toLowerCase()} ${fmtT(x.d)}${x.p!=null?' · prob. '+pct(x.p):''}</span>${!x.q?'<span class="sub bad">Manca la quota: esclusa dal calcolo.</span>':''}<button class="rm" data-key="${esc(x.key)}">Togli</button></div>`).join('')+
+        (ok.length?`<div class="tt">${line('Quota totale',Q.toFixed(2))}${line('Probabilità di prenderla',pct(Pp))}${line('Resa',R.toFixed(2))}
+          <div class="l"><span>Puntata</span><span class="dots"></span><input class="stake-in" type="text" inputmode="numeric" id="multiStake" value="${st}" aria-label="Puntata multipla in euro"><span>€</span></div>
+          ${line('Vincita potenziale',eur(st*Q))}${line('Guadagno atteso',(R>=1?'+':'−')+eur(Math.abs(st*(R-1))),'big')}</div>
+          <p class="tfoot">${R>1?'Multipla a tuo favore. Puntata consigliata: '+eur(sug)+'.':'Resa sotto 1: in media questa multipla ti fa perdere. Togli le giocate con resa più bassa.'}</p>`:'');
+    }
+    $('#ticket').innerHTML=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · Le mie giocate · ${state.mode==='multi'?'multipla':'singole'}</small></div>`+body;
+  } else
   if(state.tk==='prob'){
     const top=cards.filter(c=>c.fav).sort((a,b)=>b.pr[b.fav]-a.pr[a.fav]).slice(0,10);
     let all3=1;top.slice(0,3).forEach(c=>all3*=c.pr[c.fav]);let all5=1;top.slice(0,5).forEach(c=>all5*=c.pr[c.fav]);
@@ -487,7 +533,9 @@ function render(){
   document.querySelectorAll('#sort button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.sort));
   document.querySelectorAll('#tk button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.tk));
   document.querySelector('.controls').hidden=state.tk==='prob';
-  const b=$('#badge');b.textContent=picks.length;b.hidden=!picks.length}
+  $('#mineCtl').hidden=state.tk!=='mine';$('#clearSel').hidden=state.tk!=='mine'||!mine.length;
+  document.querySelectorAll('#mode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.mode));
+  const n=mine.length||picks.length;const b=$('#badge');b.textContent=n;b.hidden=!n}
 
 /* eventi */
 $('#sort').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.sort=b.dataset.v;ls.set('sort',state.sort);render();document.querySelector('main').scrollTop=0});
@@ -499,6 +547,14 @@ $('#tabbar').addEventListener('click',e=>{const b=e.target.closest('button');if(
   document.querySelectorAll('#tabbar button').forEach(x=>x.toggleAttribute('aria-current',x===b));
   document.querySelectorAll('#tabbar button[aria-current]').forEach(x=>x.setAttribute('aria-current','page'));
   ['partite','schedina','imp'].forEach(v=>$('#v-'+v).hidden=v!==state.view);document.querySelector('main').scrollTop=0});
+$('#list').addEventListener('click',e=>{const o=e.target.closest('button.odd');if(!o)return;const key=o.closest('.match').dataset.key,k=o.dataset.k;
+  if(state.sel[key]&&state.sel[key].k===k)delete state.sel[key];else state.sel[key]={k,d:new Date().toISOString()};
+  const sc=document.querySelector('main').scrollTop;render();document.querySelector('main').scrollTop=sc});
+$('#mode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.mode=b.dataset.v;ls.set('mode',state.mode);render()});
+$('#clearSel').addEventListener('click',()=>{state.sel={};ls.set('stakes',{});render()});
+$('#ticket').addEventListener('click',e=>{const b=e.target.closest('.rm');if(!b)return;delete state.sel[b.dataset.key];render()});
+$('#ticket').addEventListener('change',e=>{const i=e.target.closest('.stake-in');if(!i)return;const v=Math.max(0,Math.round(parseFloat(i.value.replace(',','.'))||0));
+  if(i.id==='multiStake')ls.set('multiStake',v);else{const st=ls.get('stakes',{});st[i.dataset.key]=v;ls.set('stakes',st)}render()});
 $('#list').addEventListener('click',e=>{const h=e.target.closest('.mhead');if(!h)return;const art=h.closest('.match'),k=art.dataset.key;
   const open=!state.open.has(k);open?state.open.add(k):state.open.delete(k);art.classList.toggle('open',open);h.setAttribute('aria-expanded',open);art.querySelector('.detail').hidden=!open});
 $('#list').addEventListener('change',e=>{const i=e.target.closest('input[data-k]');if(!i)return;const key=i.closest('.match').dataset.key;
