@@ -488,7 +488,7 @@ function render(){
   const staked=picks.reduce((s,p)=>s+p.stake,0),pot=picks.reduce((s,p)=>s+p.stake*p.q,0),gain=picks.reduce((s,p)=>s+p.stake*(p.ev-1),0);
   const hasOdds=cards.some(c=>c.q['1']);
   const line=(a,b,cls='')=>`<div class="l ${cls}"><span>${a}</span><span class="dots"></span><span class="num">${b}</span></div>`;
-  const head=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${state.tk==='prob'?'Più probabili':STYLE[state.style].name+' · cassa '+eur(bank)}</small></div>`;
+  const head=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${(state.tk==='prob'?'Più probabili · ':'')+STYLE[state.style].name+' · cassa '+eur(bank)}</small></div>`;
   ls.set('sel',state.sel);
   const mine=Object.entries(state.sel).map(([key,v])=>({key,...v,d:new Date(v.d)})).sort((a,b)=>a.d-b.d);
   if(state.tk==='mine'){
@@ -521,12 +521,20 @@ function render(){
   } else
   if(state.tk==='prob'){
     const top=cards.filter(c=>c.fav&&c.near).sort((a,b)=>b.pr[b.fav]-a.pr[a.fav]).slice(0,10);
-    let all3=1;top.slice(0,3).forEach(c=>all3*=c.pr[c.fav]);let all5=1;top.slice(0,5).forEach(c=>all5*=c.pr[c.fav]);
-    $('#ticket').innerHTML=head+(top.length?top.map(c=>{const k=c.fav,qq=c.q[k],r=qq?c.pr[k]*qq:null;
-      return `<div class="tr"><span class="wd">${fmtW(c.f.d)}</span><span class="m">${esc(c.f.hn+' – '+c.f.an)}</span>${line('Segno '+LBL[k]+(qq?' @ '+qq.toFixed(2):''),pct(c.pr[k]))}<span class="sub">${state.league==='all'?c.L.name:''}${r?(state.league==='all'?' · ':'')+'resa '+r.toFixed(2)+(r<1?', paga meno del dovuto':''):''}</span></div>`}).join('')+
-      `<div class="tt">${top.length>=3?line('Prenderne 3 su 3 (le prime)',pct(all3)):''}${top.length>=5?line('Prenderne 5 su 5 (le prime)',pct(all5)):''}</div>
-      <p class="tfoot">Più giocate metti insieme, più è difficile prenderle tutte. Quelle con resa sotto 1 vincono spesso ma nel lungo periodo fanno perdere.</p>`
-      :`<p class="empty">Nessuna partita con dati sufficienti.</p>`);
+    const pst=ls.get('pstakes',{});let tot=0,win=0,gain=0,none=1,allp=1,nq=0;
+    const rowsP=top.map(c=>{const k=c.fav,qq=c.q[k],pp=c.pr[k],r=qq?pp*qq:null;
+      const sug=r&&r>1?Math.max(1,Math.round(bank*Math.min(0.05,(r-1)/(qq-1)*STYLE[state.style].kf))):Math.max(1,Math.round(bank*0.01));
+      const st=pst[c.key]!=null?pst[c.key]:sug;
+      if(qq){nq++;tot+=st;win+=st*qq;gain+=st*(r-1);none*=1-pp;allp*=pp}
+      return `<div class="tr"><span class="wd">${fmtW(c.f.d)}</span><span class="m">${esc(c.f.hn+' – '+c.f.an)}</span>
+        <div class="l"><span>Segno ${LBL[k]}${qq?' @ '+qq.toFixed(2):''}</span><span class="dots"></span>${qq?`<input class="stake-in" type="text" inputmode="numeric" id="ps_${esc(c.key)}" data-pkey="${esc(c.key)}" value="${st}" aria-label="Puntata in euro"><span>€</span>`:'<span>—</span>'}</div>
+        <span class="sub">${state.league==='all'?c.L.name+' · ':''}prob. ${pct(pp)}${r?' · resa '+r.toFixed(2):''}</span>
+        ${!qq?'<span class="sub bad">Manca la quota: scrivila nel dettaglio della partita.</span>':
+          `<span class="sub">Se vince incassi ${eur(st*qq)}</span>${r<1?'<span class="sub bad">Resa sotto 1: vince spesso ma paga meno del dovuto. Puntata minima consigliata.</span>':'<span class="sub">Puntata consigliata: '+eur(sug)+'</span>'}`}
+      </div>`}).join('');
+    $('#ticket').innerHTML=head+(top.length?rowsP+(nq?`<div class="tt">${line('Giocate',nq)}${line('Puntata totale',eur(tot))}${line('Incasso se le prendi tutte',eur(win))}${line('Almeno una vinta',pct(1-none))}${line('Tutte vinte',pct(allp))}${line('Guadagno atteso',(gain>=0?'+':'−')+eur(Math.abs(gain)),'big')}</div>`:'')+
+      `<p class="tfoot">Le giocate più sicure vincono spesso ma pagano poco: per questo la puntata consigliata è bassa quando la resa è sotto 1. Puoi cambiare ogni puntata.</p>`
+      :`<p class="empty">Nessuna partita con dati sufficienti nella prossima giornata.</p>`);
   } else
   $('#ticket').innerHTML=`<div class="th"><b>SCOMMETTI</b><small>${now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${STYLE[state.style].name} · cassa ${eur(bank)}</small></div>`+
     (picks.length?picks.map(p=>`<div class="tr"><span class="wd">${fmtW(p.d)}</span><span class="m">${esc(p.m)}</span>${line('Segno '+LBL[p.k]+' @ '+p.q.toFixed(2),eur(p.stake))}<span class="sub">${state.league==='all'?p.lg+' · ':''}prob. ${pct(p.p)} · resa ${p.ev.toFixed(2)}</span></div>`).join('')+
@@ -536,7 +544,7 @@ function render(){
   $('#legendRed').hidden=!picks.length;
   document.querySelectorAll('#sort button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.sort));
   document.querySelectorAll('#tk button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.tk));
-  document.querySelector('.controls').hidden=state.tk==='prob';
+  document.querySelector('.controls').hidden=false;
   $('#mineCtl').hidden=state.tk!=='mine';$('#clearSel').hidden=state.tk!=='mine'||!mine.length;
   document.querySelectorAll('#mode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.mode));
   const n=mine.length||picks.length;const b=$('#badge');b.textContent=n;b.hidden=!n}
@@ -558,7 +566,7 @@ $('#mode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
 $('#clearSel').addEventListener('click',()=>{state.sel={};ls.set('stakes',{});render()});
 $('#ticket').addEventListener('click',e=>{const b=e.target.closest('.rm');if(!b)return;delete state.sel[b.dataset.key];render()});
 $('#ticket').addEventListener('change',e=>{const i=e.target.closest('.stake-in');if(!i)return;const v=Math.max(0,Math.round(parseFloat(i.value.replace(',','.'))||0));
-  if(i.id==='multiStake')ls.set('multiStake',v);else{const st=ls.get('stakes',{});st[i.dataset.key]=v;ls.set('stakes',st)}render()});
+  if(i.dataset.pkey){const ps=ls.get('pstakes',{});ps[i.dataset.pkey]=v;ls.set('pstakes',ps)}else if(i.id==='multiStake')ls.set('multiStake',v);else{const st=ls.get('stakes',{});st[i.dataset.key]=v;ls.set('stakes',st)}render()});
 $('#list').addEventListener('click',e=>{const h=e.target.closest('.mhead');if(!h)return;const art=h.closest('.match'),k=art.dataset.key;
   const open=!state.open.has(k);open?state.open.add(k):state.open.delete(k);art.classList.toggle('open',open);h.setAttribute('aria-expanded',open);art.querySelector('.detail').hidden=!open});
 $('#list').addEventListener('change',e=>{const i=e.target.closest('input[data-k]');if(!i)return;const key=i.closest('.match').dataset.key;
