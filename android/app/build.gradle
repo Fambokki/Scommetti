@@ -1,0 +1,26 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.fambokki.scommetti'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.fambokki.scommetti'
+        minSdk 24
+        targetSdk 34
+        versionCode (System.getenv('BUILD_NUMBER') ?: '1').toInteger()
+        versionName '1.12'
+    }
+    signingConfigs {
+        fisso {
+            storeFile rootProject.file('scommetti.keystore')
+            storePassword 'scommetti'
+            keyAlias 'scommetti'
+            keyPassword 'scommetti'
+        }
+    }
+    buildTypes {
+        debug { signingConfig signingConfigs.fisso }
+        release { minifyEnabled false; signingConfig signingConfigs.fisso }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies { implementation 'androidx.webkit:webkit:1.11.0' }

@@ -1,0 +1,9 @@
+<resources>
+    <style name="Scommetti" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/fondo</item>
+        <item name="android:statusBarColor">@color/fondo</item>
+        <item name="android:navigationBarColor">@color/fondo</item>
+    </style>
+    <color name="fondo">#0B1220</color>
+    <string name="app_name">Scommetti</string>
+</resources>

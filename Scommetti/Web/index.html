@@ -376,6 +376,13 @@ button.odd:active{transform:scale(.97)}
 </nav>
 
 <script>
+/* Android: crea lo stesso ponte nativo dell'app iOS (window.webkit.messageHandlers) sopra l'interfaccia AndroidNet */
+if(window.AndroidNet&&!(window.webkit&&window.webkit.messageHandlers)){
+  const cbs={};let seq=0;
+  window.__androidCb=(id,ok,payload)=>{const c=cbs[id];delete cbs[id];if(!c)return;if(ok){try{c.res(JSON.parse(payload))}catch(e){c.res(payload)}}else c.rej(new Error(payload))};
+  const mk=name=>({postMessage:o=>new Promise((res,rej)=>{const id=++seq;cbs[id]={res,rej};window.AndroidNet.post(name,id,JSON.stringify(o||{}))})});
+  window.webkit={messageHandlers:{net:mk('net'),icon:mk('icon')}};
+}
 (function(){
 const LEAGUES=[
  {id:'it',name:'Serie A',of:'it.1',fd:'SA',odds:'soccer_italy_serie_a'},
@@ -715,7 +722,7 @@ const iconNat=window.webkit&&window.webkit.messageHandlers&&window.webkit.messag
 let curIcon='default';
 function drawIcons(){$('#icons').innerHTML=ICONS.map(([id,n])=>`<button class="ico" role="radio" aria-checked="${id===curIcon}" data-id="${id}"><img src="icons/${id==='default'?'default':id.replace('AppIcon-','').toLowerCase()}.png" alt="">${n}</button>`).join('')}
 $('#icons').addEventListener('click',async e=>{const b=e.target.closest('.ico');if(!b)return;
-  if(!iconNat){$('#iconMsg').textContent="Il cambio icona funziona nell'app installata sull'iPhone.";return}
+  if(!iconNat){$('#iconMsg').textContent="Il cambio icona funziona nell'app installata sul telefono.";return}
   try{curIcon=await iconNat.postMessage({set:b.dataset.id});drawIcons();$('#iconMsg').textContent='Icona cambiata.'}catch(err){$('#iconMsg').textContent='Non è stato possibile cambiare icona: '+(err&&err.message||err)}});
 if(iconNat)iconNat.postMessage({}).then(v=>{curIcon=v||'default';drawIcons()}).catch(()=>{});
 drawIcons();

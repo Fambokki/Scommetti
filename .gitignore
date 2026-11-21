@@ -3,3 +3,7 @@ build/
 Payload/
 *.ipa
 webpub/
+android/app/src/main/assets/web/
+android/.gradle/
+android/app/build/
+android/build/

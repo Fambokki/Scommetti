@@ -1,0 +1,51 @@
+name: Compila APK Android
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Copia l'app web dentro il progetto Android
+        run: |
+          mkdir -p android/app/src/main/assets
+          rm -rf android/app/src/main/assets/web
+          cp -R Scommetti/Web android/app/src/main/assets/web
+
+      - name: Compila
+        working-directory: android
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: gradle assembleDebug --no-daemon
+
+      - name: Rinomina l'APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Scommetti.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Scommetti-apk
+          path: Scommetti.apk
+
+      - name: Pubblica nella pagina Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-${{ github.run_number }}
+          name: Scommetti Android ${{ github.run_number }}
+          files: Scommetti.apk
