@@ -12,19 +12,21 @@ targets:
       - path: Scommetti
         excludes:
           - "Web/**"
+          - "Info.plist"
       - path: Scommetti/Web
         type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.fambokki.scommetti
         PRODUCT_NAME: Scommetti
-        MARKETING_VERSION: "1.12"
-        CURRENT_PROJECT_VERSION: "14"
+        MARKETING_VERSION: "1.13"
+        CURRENT_PROJECT_VERSION: "15"
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Scommetti
         INFOPLIST_KEY_CFBundleDevelopmentRegion: it
+        INFOPLIST_FILE: Scommetti/Info.plist
         DEVELOPMENT_LANGUAGE: it
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES

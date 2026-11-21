@@ -38,7 +38,7 @@ import java.util.concurrent.Executors;
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final Set<String> ALLOWED = new HashSet<>(Arrays.asList(
-            "raw.githubusercontent.com", "api.football-data.org", "api.the-odds-api.com"));
+            "raw.githubusercontent.com", "api.football-data.org", "api.the-odds-api.com", "api.clubelo.com"));
     private static final String[][] ICONS = {
             {"default", ".IconDefault"}, {"AppIcon-Campo", ".IconCampo"}, {"AppIcon-Schedina", ".IconSchedina"},
             {"AppIcon-Notte", ".IconNotte"}, {"AppIcon-Oro", ".IconOro"}};
@@ -104,7 +104,8 @@ public class MainActivity extends Activity {
         try {
             JSONObject o = new JSONObject(json);
             URL url = new URL(o.getString("url"));
-            if (!"https".equals(url.getProtocol()) || !ALLOWED.contains(url.getHost())) {
+            boolean secure = "https".equals(url.getProtocol()) || ("http".equals(url.getProtocol()) && "api.clubelo.com".equals(url.getHost()));
+            if (!secure || !ALLOWED.contains(url.getHost())) {
                 reply(id, false, "Indirizzo non consentito");
                 return;
             }

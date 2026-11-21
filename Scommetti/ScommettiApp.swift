@@ -44,7 +44,8 @@ struct AppWebView: UIViewRepresentable {
         private let allowedHosts: Set<String> = [
             "raw.githubusercontent.com",
             "api.football-data.org",
-            "api.the-odds-api.com"
+            "api.the-odds-api.com",
+            "api.clubelo.com"
         ]
 
         func userContentController(_ userContentController: WKUserContentController,
@@ -57,7 +58,7 @@ struct AppWebView: UIViewRepresentable {
             guard let body = message.body as? [String: Any],
                   let text = body["url"] as? String,
                   let url = URL(string: text),
-                  url.scheme == "https",
+                  (url.scheme == "https" || (url.scheme == "http" && url.host == "api.clubelo.com")),
                   let host = url.host, allowedHosts.contains(host) else {
                 replyHandler(nil, "Indirizzo non consentito")
                 return
