@@ -121,7 +121,7 @@ main{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-lef
 
 /* barra schede */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:color-mix(in srgb,var(--card) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);
-  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);display:grid;grid-template-columns:repeat(4,1fr)}
+  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);display:grid;grid-template-columns:repeat(5,1fr)}
 .tabbar button{border:0;background:none;height:var(--tab-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.72rem;font-weight:600;color:var(--muted);cursor:pointer;position:relative}
 .tabbar svg{width:22px;height:22px}
 .tabbar button[aria-current="page"]{color:var(--signal)}
@@ -164,7 +164,7 @@ body::before{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate
 .ctl input,.ctl select{border-radius:14px}
 .btn{border-radius:999px;padding:11px 18px}
 .tabbar{left:max(14px,env(safe-area-inset-left,0px));right:max(14px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:5px;border-radius:32px;max-width:460px;margin:0 auto;gap:4px}
-.tabbar button{height:52px;border-radius:26px;transition:background .25s,color .25s}
+.tabbar button{font-size:.66rem;height:52px;border-radius:26px;transition:background .25s,color .25s}
 .tabbar button[aria-current="page"]{background:var(--glass-strong);box-shadow:inset 0 1px 0 var(--glass-hi),0 4px 14px -6px var(--glass-shade)}
 .tabbar .badge{top:4px}
 main{padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom,0px) + 44px)}
@@ -299,6 +299,27 @@ button.odd:active{transform:scale(.97)}
 .countdown .cd{white-space:nowrap;font-weight:800;font-stretch:72%;font-size:2.1rem;line-height:1;font-variant-numeric:tabular-nums;color:var(--signal)}
 .countdown .u{font-size:.7rem;font-weight:600;color:var(--muted);display:block;text-align:right;letter-spacing:.02em}
 .livetag{display:inline-block;white-space:nowrap;font-size:.72rem;font-weight:800;color:var(--signal);background:color-mix(in srgb,var(--signal) 14%,transparent);border-radius:999px;padding:2px 7px;font-stretch:90%}
+.ghead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.ghead .ctl{width:9.5em}
+.gpicks{display:flex;flex-direction:column;gap:6px}
+.gp{display:grid;grid-template-columns:auto 1fr auto auto;gap:4px 10px;align-items:center;padding:9px 12px;border-radius:16px;background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid var(--glass-edge)}
+.gp .sg{font-weight:800;font-stretch:75%;font-size:1.15rem;min-width:1.6em;text-align:center;color:var(--signal)}
+.gp .m{font-weight:600;font-size:.9rem;min-width:0;overflow-wrap:anywhere}
+.gp .m small{display:block;font-weight:500;color:var(--muted);font-size:.75rem}
+.gp .q{font-weight:800;font-stretch:75%;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.gp .x{border:0;background:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px 6px}
+.gcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px;margin-top:6px}
+.gc{background:var(--paper);color:var(--paper-ink);font-family:var(--ticket);padding:16px 16px 14px;border-radius:6px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 22px -12px var(--glass-shade);position:relative}
+.gc h3{margin:0;font-size:1.05rem;letter-spacing:.06em}
+.gc .what{font-size:.78rem;opacity:.75;margin:0 0 4px}
+.gc .l{display:flex;gap:6px;align-items:baseline;font-size:.86rem}
+.gc .l .dots{flex:1;border-bottom:1px dotted currentColor;opacity:.5;transform:translateY(-4px)}
+.gc .l.big{font-weight:700;font-size:.98rem;padding-top:4px;border-top:1px dashed color-mix(in srgb,currentColor 40%,transparent)}
+.gc .bad{color:#B23A30}.gc .good{color:#12804A}
+.gc .badges{display:flex;gap:6px;flex-wrap:wrap;min-height:0}
+.gc .bd{font-family:var(--sans);font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 8px}
+.gc .bd.v{background:#FBE6DF;color:#B23A30}.gc .bd.s{background:#DDF1E6;color:#12804A}
+.gc.top{outline:2px solid var(--signal);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -336,6 +357,14 @@ button.odd:active{transform:scale(.97)}
     <div class="cal-head"><h2 class="day" id="calMonth">Calendario</h2><button class="clear" id="calToday">Oggi</button></div>
     <div class="days" id="days" role="tablist" aria-label="Giorni"></div>
     <div id="calList" class="view"></div>
+  </section>
+
+  <section class="view" id="v-gioc" hidden>
+    <div class="ghead"><h2 class="day" style="margin:4px 0 0">Le tue giocate</h2>
+      <label class="ctl" for="gStake">Importo per colonna<input id="gStake" type="text" inputmode="decimal" class="num"></label></div>
+    <p class="hint-sel">Scegli le partite toccando un segno in Partite, oppure da Possibili vincitrici in Schedina. Qui vedi tutte le giocate che puoi fare con quelle partite, come sulla ricevuta.</p>
+    <div id="gPicks" class="gpicks"></div>
+    <div id="gCards" class="gcards"></div>
   </section>
 
   <section class="view" id="v-schedina" hidden>
@@ -390,6 +419,7 @@ button.odd:active{transform:scale(.97)}
 <nav class="tabbar" id="tabbar" aria-label="Sezioni">
   <button data-v="partite" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7l4.3 3.1-1.6 5H9.3l-1.6-5z"/></svg>Partite</button>
   <button data-v="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendario</button>
+  <button data-v="gioc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="13" height="15" rx="2"/><path d="M4 7v12a2 2 0 0 0 2 2h10M10.5 8h6M10.5 12h6"/></svg>Giocate<span class="badge" id="badgeG" hidden>0</span></button>
   <button data-v="schedina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Schedina<span class="badge" id="badge" hidden>0</span></button>
   <button data-v="imp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Impostazioni</button>
 </nav>
@@ -738,7 +768,8 @@ function render(){
   document.querySelector('.controls').hidden=false;
   $('#mineCtl').hidden=state.tk!=='mine';$('#clearSel').hidden=state.tk!=='mine'||!mine.length;
   document.querySelectorAll('#mode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.mode));
-  const n=mine.length||picks.length;const b=$('#badge');b.textContent=n;b.hidden=!n}
+  const n=mine.length||picks.length;const b=$('#badge');b.textContent=n;b.hidden=!n;
+  const bg=$('#badgeG');bg.textContent=mine.length;bg.hidden=!mine.length;if(state.view==='gioc')renderGioc()}
 
 /* calendario */
 const dk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -768,6 +799,44 @@ function renderCal(){
 $('#days').addEventListener('click',e=>{const b=e.target.closest('.dbtn');if(!b)return;state.calDay=b.dataset.d;renderCal()});
 $('#calToday').addEventListener('click',()=>{state.calDay=dk(new Date());renderCal()});
 
+/* giocate: tutte le schedine possibili con le partite scelte */
+function renderGioc(){
+  const st=ls.get('gStake',1);$('#gStake').value=String(st).replace('.',',');
+  const mine=Object.entries(state.sel).map(([key,v])=>({key,...v,d:new Date(v.d)})).sort((a,b)=>a.d-b.d);
+  const ok=mine.filter(x=>x.q&&x.p!=null),n=ok.length;
+  $('#gPicks').innerHTML=mine.map(x=>`<div class="gp"><span class="sg">${LBL[x.k]}</span><span class="m">${esc(x.m)}<small>${fmtW(x.d)} · prob. ${pct(x.p)}</small></span><span class="q num">${x.q?x.q.toFixed(2):'—'}</span><button class="x" data-key="${esc(x.key)}" aria-label="Togli">✕</button></div>`).join('');
+  if(n<1){$('#gCards').innerHTML=`<p class="empty">${mine.length?'Alle partite scelte manca la quota: scrivila nel dettaglio della partita.':'Nessuna partita scelta. Vai in Partite e tocca il segno che vuoi giocare.'}</p>`;return}
+  const C=(a,b)=>{let r=1;for(let i=1;i<=b;i++)r=r*(a-b+i)/i;return Math.round(r)};
+  const esym=v=>{const e=[1];for(const x of v){for(let j=e.length;j>0;j--)e[j]=(e[j]||0)+e[j-1]*x}return e};
+  const dist=[1];for(const x of ok){for(let j=dist.length;j>0;j--)dist[j]=(dist[j]||0)*(1-x.p)+dist[j-1]*x.p;dist[0]*=1-x.p}
+  const pq=esym(ok.map(x=>x.p*x.q)),qs=ok.map(x=>x.q).sort((a,b)=>a-b);
+  const pay=(w,ks)=>{const e=esym(w);return st*ks.reduce((a,k)=>a+(e[k]||0),0)};
+  const make=(name,what,ks)=>{const combos=ks.reduce((a,k)=>a+C(n,k),0),cost=combos*st,kmin=Math.min(...ks);
+    const exp=st*ks.reduce((a,k)=>a+(pq[k]||0),0),pWin=dist.reduce((a,v,i)=>a+(i>=kmin?v:0),0);
+    return {name,what,ks,combos,cost,exp,gain:exp-cost,pWin,pAll:dist[n]||0,max:pay(qs,ks),min:pay(qs.slice(0,kmin),ks),kmin}};
+  const list=[];
+  if(n>=2)list.push(make('MULTIPLA',`Tutte e ${n} insieme in una sola schedina: vinci solo se le prendi tutte.`,[n]));
+  list.push(make(n===1?'SINGOLA':'SINGOLE',n===1?'Una sola partita.':`Una schedina per ogni partita: ognuna vince da sola.`,[1]));
+  for(let k=n-1;k>=2;k--)list.push(make(`SISTEMA ${k} SU ${n}`,`Tutte le multiple da ${k}: vinci qualcosa se ne prendi almeno ${k}.`,[k]));
+  if(n>=3&&n<=8)list.push(make(`INTEGRALE ${n}`,`Tutte le combinazioni, dalle singole alla multipla: vinci qualcosa anche con una sola giusta.`,Array.from({length:n},(_,i)=>i+1)));
+  const bestV=list.reduce((a,b)=>b.gain/b.cost>a.gain/a.cost?b:a),bestS=list.reduce((a,b)=>b.pWin>a.pWin?b:a);
+  const line=(a,b,cls='')=>`<div class="l ${cls}"><span>${a}</span><span class="dots"></span><span class="num">${b}</span></div>`;
+  const miss=mine.length-n;
+  $('#gCards').innerHTML=(miss?`<p class="hint-sel" style="grid-column:1/-1">${miss===1?'Una partita senza quota è esclusa':miss+' partite senza quota sono escluse'} dai calcoli: scrivi la quota nel dettaglio della partita.</p>`:'')+list.map(g=>`<article class="gc${g===bestV&&g.gain>0?' top':''}">
+    <div class="badges">${g===bestV&&g.gain>0?'<span class="bd v">Più conveniente</span>':''}${g===bestS?'<span class="bd s">Più facile da vincere</span>':''}</div>
+    <h3>${g.name}</h3><p class="what">${g.what}</p>
+    ${line('Colonne',g.combos)}${line('Costo',eur2(g.cost))}
+    ${line(g.name==='MULTIPLA'?'Vincita':'Vincita se le prendi tutte',eur2(g.max))}
+    ${g.kmin<n?line(`Vincita minima (${g.kmin} giuste)`,g.min<g.cost?`<span class="bad">${eur2(g.min)}</span>`:eur2(g.min)):''}
+    ${line('Probabilità di vincere qualcosa',pct(g.pWin))}
+    ${g.kmin<n?line('Probabilità di prenderle tutte',pctS(g.pAll)):''}
+    ${line('Guadagno atteso',`<span class="${g.gain>=0?'good':'bad'}">${g.gain>=0?'+':'−'}${eur2(Math.abs(g.gain))}</span>`,'big')}
+  </article>`).join('')}
+const eur2=v=>(Math.abs(v)<100&&Math.round(v*100)%100?v.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}):Math.round(v).toLocaleString('it-IT'))+' €';
+const pctS=p=>p<0.01&&p>0?(p*100).toLocaleString('it-IT',{maximumFractionDigits:1})+'%':pct(p);
+$('#gStake').addEventListener('change',e=>{const v=parseFloat(e.target.value.replace(',','.'));ls.set('gStake',v>0?Math.round(v*100)/100:1);renderGioc()});
+$('#gPicks').addEventListener('click',e=>{const b=e.target.closest('.x');if(!b)return;delete state.sel[b.dataset.key];render();renderGioc()});
+
 /* eventi */
 $('#sort').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.sort=b.dataset.v;ls.set('sort',state.sort);render();document.querySelector('main').scrollTop=0});
 $('#tk').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.tk=b.dataset.v;ls.set('tk',state.tk);render()});
@@ -777,7 +846,7 @@ $('#refresh').addEventListener('click',()=>{state.cache={};load(true)});
 $('#tabbar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.view=b.dataset.v;
   document.querySelectorAll('#tabbar button').forEach(x=>x.toggleAttribute('aria-current',x===b));
   document.querySelectorAll('#tabbar button[aria-current]').forEach(x=>x.setAttribute('aria-current','page'));
-  ['partite','cal','schedina','imp'].forEach(v=>$('#v-'+v).hidden=v!==state.view);if(state.view==='cal')renderCal();document.querySelector('main').scrollTop=0});
+  ['partite','cal','gioc','schedina','imp'].forEach(v=>$('#v-'+v).hidden=v!==state.view);if(state.view==='cal')renderCal();if(state.view==='gioc')renderGioc();document.querySelector('main').scrollTop=0});
 $('#list').addEventListener('click',e=>{const o=e.target.closest('button.odd');if(!o)return;const key=o.closest('.match').dataset.key,k=o.dataset.k;
   if(state.sel[key]&&state.sel[key].k===k)delete state.sel[key];else state.sel[key]={k,d:new Date().toISOString()};
   const sc=document.querySelector('main').scrollTop;render();document.querySelector('main').scrollTop=sc});
