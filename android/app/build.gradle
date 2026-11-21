@@ -6,7 +6,7 @@ android {
         applicationId 'com.fambokki.scommetti'
         minSdk 24
         targetSdk 34
-        versionCode (System.getenv('BUILD_NUMBER') ?: '1').toInteger()
+        versionCode Integer.parseInt(System.getenv('BUILD_NUMBER') ?: '1')
         versionName '1.12'
     }
     signingConfigs {
