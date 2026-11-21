@@ -298,6 +298,7 @@ button.odd:active{transform:scale(.97)}
 .countdown .wh{font-size:.84rem;color:var(--muted);text-align:right;padding-bottom:5px}
 .countdown .cd{white-space:nowrap;font-weight:800;font-stretch:72%;font-size:2.1rem;line-height:1;font-variant-numeric:tabular-nums;color:var(--signal)}
 .countdown .u{font-size:.7rem;font-weight:600;color:var(--muted);display:block;text-align:right;letter-spacing:.02em}
+.livetag{display:inline-block;font-size:.72rem;font-weight:800;color:var(--signal);background:color-mix(in srgb,var(--signal) 14%,transparent);border-radius:999px;padding:2px 7px;font-stretch:90%}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -440,12 +441,13 @@ async function getJSON(url,opt){
   if(nat){const r=await nat.postMessage({url,headers:(opt&&opt.headers)||{}});if(r.status<200||r.status>=300)throw httpErr(r.status);return JSON.parse(r.body)}
   const r=await fetch(url,opt);if(!r.ok)throw httpErr(r.status);return r.json()}
 async function loadOpenfootball(L){
-  const res=[],fix=[];let lastDate=null;
+  const res=[],fix=[];let lastDate=null,missing=0;
   for(const y of [curStart-1,curStart]){let d;try{d=await getJSON(`https://raw.githubusercontent.com/openfootball/football.json/master/${sName(y)}/${L.of}.json`)}catch(e){continue}
     for(const m of d.matches||[]){if(!m||!m.team1)continue;const dt=new Date(m.date+'T'+(m.time||'15:00'));const ft=m.score&&m.score.ft;
       if(ft&&ft.length==2){res.push({h:m.team1,a:m.team2,hg:ft[0],ag:ft[1],d:dt,md:(String(m.round||'').match(/\d+/)||[])[0]});if(!lastDate||dt>lastDate)lastDate=dt}
-      else if(y==curStart&&dt>=new Date(now.getTime()-3*3600e3))fix.push({h:m.team1,a:m.team2,d:dt,md:(String(m.round||'').match(/\d+/)||[])[0]})}}
-  return {res,fix,src:'openfootball',lastDate}}
+      else if(y==curStart&&dt<new Date(now.getTime()-3*3600e3))missing++;
+      else if(y==curStart)fix.push({h:m.team1,a:m.team2,d:dt,md:(String(m.round||'').match(/\d+/)||[])[0]})}}
+  return {res,fix,src:'openfootball',lastDate,missing}}
 const SHORT={};
 const show=(t,fb)=>t?(SHORT[t]||t):fb;
 /* football-data.org: piano gratuito = 10 richieste al minuto.
@@ -470,13 +472,14 @@ async function fdSeason(L,key,y,force){
     const v=fdCompact(d);ls.set(ck,{t:Date.now(),v});return {rows:v,stale:false}}
   catch(e){if(/esaurite/.test(e.message))ls.set('fdblock',Date.now()+60e3);if(c)return {rows:c.v,stale:true};throw e}}
 async function loadFD(L,key,force){
-  const res=[],fix=[];let lastDate=null,stale=false;
+  const res=[],fix=[];let lastDate=null,stale=false,missing=0;
   for(const y of [curStart-1,curStart]){let r;try{r=await fdSeason(L,key,y,force&&y===curStart)}catch(e){if(y==curStart)throw e;continue}
     if(r.stale)stale=true;
     for(const [ud,st,h,hs,a,as,hg,ag,md] of r.rows){const dt=new Date(ud);if(hs)SHORT[h]=hs;if(as)SHORT[a]=as;
       if(st==='FINISHED'&&hg!=null){res.push({h,a,hg,ag,d:dt,md});if(!lastDate||dt>lastDate)lastDate=dt}
-      else if(['SCHEDULED','TIMED'].includes(st))fix.push({h,a,d:dt,md})}}
-  return {res,fix,src:'football-data.org',lastDate,stale}}
+      else if(['SCHEDULED','TIMED','IN_PLAY','PAUSED'].includes(st)&&dt<new Date(now.getTime()-3*3600e3))missing++;
+      else if(['SCHEDULED','TIMED','IN_PLAY','PAUSED'].includes(st))fix.push({h,a,d:dt,md})}}
+  return {res,fix,src:'football-data.org',lastDate,stale,missing}}
 async function loadOdds(L,key,force){
   const ck='odds_'+L.id,c=ls.get(ck,null);if(!force&&c&&Date.now()-c.t<60*60e3)return c.v;
   const v=await getJSON(`https://api.the-odds-api.com/v4/sports/${L.odds}/odds?regions=eu&markets=h2h,totals&oddsFormat=decimal&apiKey=${encodeURIComponent(key)}`);
@@ -553,13 +556,13 @@ async function loadLeague(L,force){
   else fixtures=base.fix.sort((x,y)=>x.d-y.d).slice(0,20).map(f=>({...f,hn:show(f.h),an:show(f.a)}));
   const books=new Map();if(odds)for(const ev of odds)for(const b of ev.bookmakers||[])books.set(b.key,b.title);
   return state.cache[L.id]={L,M,fixtures,base,odds,books,notes}}
-function summarize(notes,age){const out=[],hasKey=!!ls.get('kFd','');
+function summarize(notes,age,missing){const out=[],hasKey=!!ls.get('kFd','');
   const g=t=>notes.filter(n=>n.t===t),names=a=>a.map(n=>n.l).join(', ');
   const fd=g('fd'),st=g('stale'),od=g('odds');
   if(fd.length)out.push(`<span class="warn">football-data.org: ${esc(fd[0].m)}${fd.length<5?' per '+names(fd):''}. Uso l'archivio openfootball${fd.length===5?'':' per questi campionati'}. Riprova tra un minuto con il tasto aggiorna.</span>`);
   if(st.length)out.push(`<span>Risultati di ${names(st)} dall'ultima copia salvata: si aggiornano al prossimo tentativo.</span>`);
   if(od.length)out.push(`<span class="warn">Quote: ${esc(od[0].m)}${od.length<5?' per '+names(od):''}. Controlla la chiave in Impostazioni.</span>`);
-  if(age>9&&!fd.length)out.push(`<span class="warn">I risultati sono fermi a ${age} giorni fa.${hasKey?'':' Aggiungi la chiave di football-data.org in Impostazioni per stime più precise.'}</span>`);
+  if(missing>0&&!fd.length)out.push(`<span class="warn">Mancano i risultati di ${missing} ${missing===1?'partita già giocata':'partite già giocate'}: le stime potrebbero essere meno precise.${hasKey?'':' Aggiungi la chiave di football-data.org in Impostazioni.'}</span>`);
   return out}
 async function load(force){
   const ids=state.league==='all'?LEAGUES:[LEAGUES.find(x=>x.id===state.league)];
@@ -576,7 +579,7 @@ async function load(force){
   const age=last?Math.round((now-last)/864e5):0;
   const nRes=sets.reduce((s,x)=>s+x.base.res.length,0);
   $('#status').innerHTML=[`<span>${nRes} risultati analizzati, quote ${books.size?'da '+books.size+' bookmaker':'da inserire a mano'}.</span>`,
-    ...summarize(sets.flatMap(x=>x.notes),age),errs.length?`<span class="warn">Non caricati: ${errs.join(', ')}.</span>`:''].join('');
+    ...summarize(sets.flatMap(x=>x.notes),age,sets.reduce((a,x)=>a+(x.base.missing||0),0)),errs.length?`<span class="warn">Non caricati: ${errs.join(', ')}.</span>`:''].join('');
   render()}
 
 /* calcolo giocate */
@@ -589,25 +592,25 @@ const pct=p=>p==null?'–':Math.round(p*100)+'%';
 const LBL={'1':'1','X':'X','2':'2','O':'Over 2,5','U':'Under 2,5'};
 function compute(){
   const manual=ls.get('manual',{}),S=STYLE[state.style],bank=ls.get('bank',1000),W=0.45;
-  const rows=[];for(const set of state.sets)for(const f of set.fixtures)rows.push({set,f});rows.sort((x,y)=>x.f.d-y.f.d);
+  const rows=[];const cutoff=Date.now()-150*60e3;for(const set of state.sets)for(const f of set.fixtures)if(f.d.getTime()>cutoff)rows.push({set,f});rows.sort((x,y)=>x.f.d-y.f.d);
   const first={};for(const r of rows){const id=r.set.L.id;if(r.f.d>now&&!first[id])first[id]=r.f.d}
   const isNear=(id,d)=>first[id]&&d>=new Date(now.getTime()-3*3600e3)&&d<new Date(first[id].getTime()+4*864e5);
   const cards=[],picks=[];
   rows.forEach(({set,f},idx)=>{const {M,L}=set;
     const key=L.id+'|'+f.d.toISOString().slice(0,10)+'|'+norm(f.hn).join('')+'|'+norm(f.an).join('');
-    const P=f.h&&f.a?predict(M,f.h,f.a):null,api=f.ev?oddsFor(f.ev,state.book):{},man=manual[key]||{},q={};
+    const P=f.h&&f.a?predict(M,f.h,f.a):null,live=f.d.getTime()<=Date.now(),api=f.ev&&!live?oddsFor(f.ev,state.book):{},man=manual[key]||{},q={};
     ['1','X','2','O','U'].forEach(k=>{const v=parseFloat(man[k]);q[k]=v>1?v:(api[k]||null)});
     let mk=null;if(q['1']&&q.X&&q['2']){const s=1/q['1']+1/q.X+1/q['2'];mk={'1':1/q['1']/s,'X':1/q.X/s,'2':1/q['2']/s}}
     let mo=null;if(q.O&&q.U){const s=1/q.O+1/q.U;mo={O:1/q.O/s,U:1/q.U/s}}
-    const E=eloFor(L,f),SH=f.ev?sharpFor(f.ev):null,MK=SH||mk;
+    const E=eloFor(L,f),SH=f.ev&&!live?sharpFor(f.ev):null,MK=SH||mk;
     const pr={};if(P){const src=[[{'1':P.p1,'X':P.px,'2':P.p2},0.30],[E,0.25],[MK,0.45]].filter(x=>x[0]);const wt=src.reduce((a,x)=>a+x[1],0);
       for(const k of ['1','X','2'])pr[k]=src.reduce((a,x)=>a+x[0][k]*x[1],0)/wt;
       pr.O=mo?W*P.ov+(1-W)*mo.O:P.ov;pr.U=1-pr.O}
     const ev={};for(const k in pr)if(q[k])ev[k]=pr[k]*q[k];
     let best=null;for(const k of ['1','X','2','O','U'])if(ev[k]&&ev[k]>=1+S.edge&&pr[k]>=0.15&&(!best||ev[k]>ev[best]))best=k;
-    const near=isNear(L.id,f.d);let pick=null;if(best&&near){const kelly=(pr[best]*q[best]-1)/(q[best]-1);pick={k:best,m:f.hn+' – '+f.an,lg:L.name,d:f.d,p:pr[best],q:q[best],ev:ev[best],frac:Math.min(0.05,kelly*S.kf)};picks.push(pick)}
+    const near=!live&&isNear(L.id,f.d);let pick=null;if(best&&near){const kelly=(pr[best]*q[best]-1)/(q[best]-1);pick={k:best,m:f.hn+' – '+f.an,lg:L.name,d:f.d,p:pr[best],q:q[best],ev:ev[best],frac:Math.min(0.05,kelly*S.kf)};picks.push(pick)}
     let fav=null;if(pr['1']!=null)for(const k of ['1','X','2'])if(!fav||pr[k]>pr[fav])fav=k;
-    cards.push({f,L,idx,key,P,pr,q,ev,mk,pick,man,fav,near,E,SH})});
+    cards.push({f,L,idx,key,P,pr,q,ev,mk,pick,man,fav,near,E,SH,live})});
   const tot=picks.reduce((s,p)=>s+p.frac,0),scale=tot>0.25?0.25/tot:1;picks.forEach(p=>{p.stake=Math.max(1,Math.round(bank*p.frac*scale))});
   return {cards,picks,bank}}
 
@@ -618,7 +621,7 @@ function render(){
   const out=[];let lastDay='';const byProb=state.sort==='prob';
   let list=cards.slice(0,all?80:40);if(byProb)list=list.filter(c=>c.fav).sort((a,b)=>b.pr[b.fav]-a.pr[a.fav]);
   if(byProb&&list.length)out.push(`<h2 class="day">Dalla più sicura alla meno sicura</h2>`);
-  for(const c of list){const {f,L,idx,key,P,pr,q,ev,mk,pick,man,fav,E,SH}=c;
+  for(const c of list){const {f,L,idx,key,P,pr,q,ev,mk,pick,man,fav,E,SH,live}=c;
     const day=fmtD(f.d);if(!byProb&&day!==lastDay){out.push(`<h2 class="day">${day}</h2>`);lastDay=day}
     const open=state.open.has(key);
     const cell=k=>{const isV=pick&&pick.k===k,isF=fav===k,isS=state.sel[key]&&state.sel[key].k===k;
@@ -628,9 +631,10 @@ function render(){
       ${pr[k]!=null?`<div class="meter" style="width:${(pr[k]*100).toFixed(1)}%"></div>`:''}</button>`};
     const ouPick=pick&&(pick.k==='O'||pick.k==='U');
     out.push(`<article class="match${open?' open':''}" data-key="${esc(key)}">
-      <button class="mhead" aria-expanded="${open}"><span class="time num">${fmtT(f.d)}</span><span class="team">${esc(f.hn)}</span>${byProb?`<span class="when">${f.d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric'})}${all?' · '+L.name:''}</span>`:all?`<span class="lgname">${L.name}</span>`:''}<span class="team">${esc(f.an)}</span>${CHEV}</button>
+      <button class="mhead" aria-expanded="${open}"><span class="time num">${live?'<span class="livetag">In corso</span>':fmtT(f.d)}</span><span class="team">${esc(f.hn)}</span>${byProb?`<span class="when">${f.d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric'})}${all?' · '+L.name:''}</span>`:all?`<span class="lgname">${L.name}</span>`:''}<span class="team">${esc(f.an)}</span>${CHEV}</button>
       <div class="odds">${cell('1')}${cell('X')}${cell('2')}</div>
       ${ouPick?`<div class="note">Valore su ${LBL[pick.k]} a ${pick.q.toFixed(2)}: punta ${eur(pick.stake)}.</div>`:''}
+      ${live?`<div class="note">Partita iniziata alle ${fmtT(f.d)}: le quote ora cambiano in diretta, quindi l'app non dà consigli.</div>`:''}
       ${!P?`<div class="note">Squadra con pochi dati storici: meglio non giocarla.</div>`:''}
       <div class="detail"${open?'':' hidden'}>
         <h3>Quote del tuo bookmaker</h3>
