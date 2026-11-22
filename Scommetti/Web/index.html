@@ -319,7 +319,29 @@ button.odd:active{transform:scale(.97)}
 .gc .badges{display:flex;gap:6px;flex-wrap:wrap;min-height:0}
 .gc .bd{font-family:var(--sans);font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 8px}
 .gc .bd.v{background:#FBE6DF;color:#B23A30}.gc .bd.s{background:#DDF1E6;color:#12804A}
-.gc.top{outline:2px solid var(--signal);outline-offset:2px}
+.gc.best{outline:2px solid var(--signal);outline-offset:2px}
+.editbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:color-mix(in srgb,var(--signal) 14%,transparent);border:1px solid color-mix(in srgb,var(--signal) 50%,transparent);font-weight:600;font-size:.88rem;margin-bottom:10px}
+.confirm{margin-top:6px;border:0;border-radius:999px;background:var(--paper-ink);color:var(--paper);font:700 .9rem var(--sans);padding:11px 14px;cursor:pointer}
+.confirm:disabled{opacity:.4;cursor:default}
+.stats4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0 12px}
+.stats4 div{padding:10px;border-radius:16px;background:var(--glass);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border:1px solid var(--glass-edge);display:flex;flex-direction:column;gap:2px}
+.stats4 small{font-size:.72rem;color:var(--muted);font-weight:600}
+.stats4 b{font-weight:800;font-stretch:75%;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.played{display:flex;flex-direction:column;gap:12px}
+.ps{background:var(--paper);color:var(--paper-ink);font-family:var(--ticket);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 22px -12px var(--glass-shade)}
+.ps .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ps h3{margin:0;font-size:1rem;letter-spacing:.06em}
+.ps .st{font-family:var(--sans);font-size:.72rem;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.st.wait{background:#E6EAF0;color:#3A4658}.st.lock{background:#FFF1D6;color:#8A5A00}.st.won{background:#DDF1E6;color:#12804A}.st.lost{background:#FBE6DF;color:#B23A30}
+.ps .pk{display:grid;grid-template-columns:1.4em 1fr auto;gap:2px 8px;font-size:.84rem;padding:6px 0;border-top:1px dashed color-mix(in srgb,currentColor 35%,transparent)}
+.ps .pk .o{font-weight:800}.ps .pk .o.w{color:#12804A}.ps .pk .o.l{color:#B23A30}
+.ps .pk small{grid-column:2 / -1;opacity:.7;font-size:.76rem}
+.ps .l{display:flex;gap:6px;align-items:baseline;font-size:.86rem}
+.ps .l .dots{flex:1;border-bottom:1px dotted currentColor;opacity:.5;transform:translateY(-4px)}
+.ps .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.ps .acts button{border:1px solid color-mix(in srgb,currentColor 40%,transparent);background:transparent;color:inherit;font:700 .82rem var(--sans);border-radius:999px;padding:7px 14px;cursor:pointer}
+.ps .note{font-size:.76rem;opacity:.75}
+@media (max-width:420px){.stats4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -360,11 +382,16 @@ button.odd:active{transform:scale(.97)}
   </section>
 
   <section class="view" id="v-gioc" hidden>
+    <div class="seg" id="gview" role="group" aria-label="Sezione" style="grid-template-columns:1fr 1fr"><button data-v="new">Nuova schedina</button><button data-v="played">Schedine giocate</button></div>
+    <div id="gNew">
+    <div class="editbar" id="editBar" hidden><span id="editTxt">Stai modificando una schedina.</span><button class="clear" id="editCancel">Annulla modifica</button></div>
     <div class="ghead"><h2 class="day" style="margin:4px 0 0">Le tue giocate</h2>
       <label class="ctl" for="gStake">Importo per colonna<input id="gStake" type="text" inputmode="decimal" class="num"></label></div>
     <p class="hint-sel">Scegli le partite toccando un segno in Partite, oppure da Possibili vincitrici in Schedina. Qui vedi tutte le giocate che puoi fare con quelle partite, come sulla ricevuta.</p>
     <div id="gPicks" class="gpicks"></div>
     <div id="gCards" class="gcards"></div>
+    </div>
+    <div id="gPlayed" hidden></div>
   </section>
 
   <section class="view" id="v-schedina" hidden>
@@ -443,7 +470,7 @@ const LEAGUES=[
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const $=s=>document.querySelector(s);
 const STYLE={p:{edge:0.05,kf:0.25,name:'Prudente'},e:{edge:0.03,kf:1/3,name:'Equilibrato'},a:{edge:0.015,kf:0.5,name:'Aggressivo'}};
-const state={sel:ls.get('sel',{}),mode:ls.get('mode','single'),sort:ls.get('sort','time'),tk:ls.get('tk','value'),league:ls.get('lg','all'),style:ls.get('style','e'),book:'median',sets:[],cache:{},open:new Set(),view:'partite'};
+const state={gview:'new',editId:null,sel:ls.get('sel',{}),mode:ls.get('mode','single'),sort:ls.get('sort','time'),tk:ls.get('tk','value'),league:ls.get('lg','all'),style:ls.get('style','e'),book:'median',sets:[],cache:{},open:new Set(),view:'partite'};
 if(!STYLE[state.style])state.style='e';
 $('#bank').value=ls.get('bank',1000);$('#kOdds').value=ls.get('kOdds','');$('#kFd').value=ls.get('kFd','');
 
@@ -801,6 +828,12 @@ $('#calToday').addEventListener('click',()=>{state.calDay=dk(new Date());renderC
 
 /* giocate: tutte le schedine possibili con le partite scelte */
 function renderGioc(){
+  document.querySelectorAll('#gview button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.gview));
+  $('#gNew').hidden=state.gview!=='new';$('#gPlayed').hidden=state.gview!=='played';
+  const pl=ls.get('played',[]);$('#gview button[data-v=played]').textContent='Schedine giocate'+(pl.length?' ('+pl.length+')':'');
+  if(state.gview==='played'){renderPlayed();return}
+  const ed=state.editId&&pl.find(x=>x.id===state.editId);$('#editBar').hidden=!ed;
+  if(ed)$('#editTxt').textContent='Stai modificando la schedina '+ed.name.toLowerCase()+' del '+new Date(ed.at).toLocaleDateString('it-IT',{day:'numeric',month:'short'})+'.';
   const st=ls.get('gStake',1);$('#gStake').value=String(st).replace('.',',');
   const mine=Object.entries(state.sel).map(([key,v])=>({key,...v,d:new Date(v.d)})).sort((a,b)=>a.d-b.d);
   const ok=mine.filter(x=>x.q&&x.p!=null),n=ok.length;
@@ -819,10 +852,11 @@ function renderGioc(){
   list.push(make(n===1?'SINGOLA':'SINGOLE',n===1?'Una sola partita.':`Una schedina per ogni partita: ognuna vince da sola.`,[1]));
   for(let k=n-1;k>=2;k--)list.push(make(`SISTEMA ${k} SU ${n}`,`Tutte le multiple da ${k}: vinci qualcosa se ne prendi almeno ${k}.`,[k]));
   if(n>=3&&n<=8)list.push(make(`INTEGRALE ${n}`,`Tutte le combinazioni, dalle singole alla multipla: vinci qualcosa anche con una sola giusta.`,Array.from({length:n},(_,i)=>i+1)));
+  const started=ok.some(x=>x.d.getTime()<=Date.now());
   const bestV=list.reduce((a,b)=>b.gain/b.cost>a.gain/a.cost?b:a),bestS=list.reduce((a,b)=>b.pWin>a.pWin?b:a);
   const line=(a,b,cls='')=>`<div class="l ${cls}"><span>${a}</span><span class="dots"></span><span class="num">${b}</span></div>`;
   const miss=mine.length-n;
-  $('#gCards').innerHTML=(miss?`<p class="hint-sel" style="grid-column:1/-1">${miss===1?'Una partita senza quota è esclusa':miss+' partite senza quota sono escluse'} dai calcoli: scrivi la quota nel dettaglio della partita.</p>`:'')+list.map(g=>`<article class="gc${g===bestV&&g.gain>0?' top':''}">
+  $('#gCards').innerHTML=(miss?`<p class="hint-sel" style="grid-column:1/-1">${miss===1?'Una partita senza quota è esclusa':miss+' partite senza quota sono escluse'} dai calcoli: scrivi la quota nel dettaglio della partita.</p>`:'')+list.map(g=>`<article class="gc${g===bestV&&g.gain>0?' best':''}">
     <div class="badges">${g===bestV&&g.gain>0?'<span class="bd v">Più conveniente</span>':''}${g===bestS?'<span class="bd s">Più facile da vincere</span>':''}</div>
     <h3>${g.name}</h3><p class="what">${g.what}</p>
     ${line('Colonne',g.combos)}${line('Costo',eur2(g.cost))}
@@ -831,11 +865,70 @@ function renderGioc(){
     ${line('Probabilità di vincere qualcosa',pct(g.pWin))}
     ${g.kmin<n?line('Probabilità di prenderle tutte',pctS(g.pAll)):''}
     ${line('Guadagno atteso',`<span class="${g.gain>=0?'good':'bad'}">${g.gain>=0?'+':'−'}${eur2(Math.abs(g.gain))}</span>`,'big')}
-  </article>`).join('')}
+    <button class="confirm" data-i="${list.indexOf(g)}"${started?' disabled':''}>${state.editId?'Conferma modifica':'Conferma schedina'}</button>
+  </article>`).join('')+(started?`<p class="hint-sel" style="grid-column:1/-1">Una delle partite scelte è già iniziata: toglila per poter confermare.</p>`:'');
+  state.gList=list;state.gOk=ok;state.gStakeV=st}
 const eur2=v=>(Math.abs(v)<100&&Math.round(v*100)%100?v.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}):Math.round(v).toLocaleString('it-IT'))+' €';
 const pctS=p=>p<0.01&&p>0?(p*100).toLocaleString('it-IT',{maximumFractionDigits:1})+'%':pct(p);
 $('#gStake').addEventListener('change',e=>{const v=parseFloat(e.target.value.replace(',','.'));ls.set('gStake',v>0?Math.round(v*100)/100:1);renderGioc()});
 $('#gPicks').addEventListener('click',e=>{const b=e.target.closest('.x');if(!b)return;delete state.sel[b.dataset.key];render();renderGioc()});
+
+/* schedine giocate */
+const splitM=m=>{const i=m.indexOf(' – ');return i<0?[m,'']:[m.slice(0,i),m.slice(i+3)]};
+function outcomeOf(pk){
+  if(pk.res)return pk.res;
+  const set=state.sets.find(x=>x.L.name===pk.lg);if(!set)return null;
+  const [h,a]=splitM(pk.m),d=new Date(pk.d);
+  for(const r of set.base.res){if(Math.abs(r.d-d)>36*3600e3)continue;
+    const rh=show(r.h),ra=show(r.a);
+    if(matchTeam(h,[rh,r.h])&&matchTeam(a,[ra,r.a])){const sign=r.hg>r.ag?'1':r.hg<r.ag?'2':'X';return {sign,score:r.hg+'-'+r.ag}}}
+  return null}
+function settle(sl){let changed=false;
+  for(const pk of sl.picks){if(pk.res)continue;const o=outcomeOf(pk);if(o){pk.res=o;changed=true}}
+  const won=sl.picks.filter(p=>p.res&&p.res.sign===p.k),lost=sl.picks.filter(p=>p.res&&p.res.sign!==p.k),pend=sl.picks.length-won.length-lost.length;
+  const esym=v=>{const e=[1];for(const x of v){for(let j=e.length;j>0;j--)e[j]=(e[j]||0)+e[j-1]*x}return e};
+  const ew=esym(won.map(p=>p.q)),paid=sl.stake*sl.ks.reduce((a,k)=>a+(ew[k]||0),0);
+  const maxW=Math.max(...sl.ks),kmin=Math.min(...sl.ks);
+  let status='wait';
+  if(!pend)status=paid>0?'won':'lost';
+  else if(sl.picks.length-lost.length<kmin)status='lost';
+  else if(new Date(Math.min(...sl.picks.map(p=>+new Date(p.d))))<=Date.now())status='lock';
+  return {status,paid:status==='lost'?0:paid,won:won.length,lost:lost.length,pend,changed}}
+function renderPlayed(){
+  const pl=ls.get('played',[]);let dirty=false;
+  const rows=pl.map(sl=>{const r=settle(sl);if(r.changed)dirty=true;return {sl,r}});
+  if(dirty)ls.set('played',pl);
+  const spent=pl.reduce((a,x)=>a+x.cost,0),won=rows.reduce((a,x)=>a+(x.r.status==='won'?x.r.paid:0),0),closed=rows.filter(x=>x.r.status==='won'||x.r.status==='lost');
+  const spentC=closed.reduce((a,x)=>a+x.sl.cost,0),bal=won-spentC;
+  const lbl={wait:'Da giocare',lock:'In corso',won:'Vinta',lost:'Persa'};
+  const line=(a,b)=>`<div class="l"><span>${a}</span><span class="dots"></span><span class="num">${b}</span></div>`;
+  $('#gPlayed').innerHTML=pl.length?`<div class="stats4"><div><small>Schedine</small><b>${pl.length}</b></div><div><small>Puntati</small><b>${eur2(spent)}</b></div><div><small>Vinti</small><b>${eur2(won)}</b></div><div><small>Bilancio chiuse</small><b style="color:${bal>=0?'var(--fav)':'var(--signal)'}">${bal>=0?'+':'−'}${eur2(Math.abs(bal))}</b></div></div>
+    <div class="played">${rows.slice().reverse().map(({sl,r})=>{const first=new Date(Math.min(...sl.picks.map(p=>+new Date(p.d)))),canEdit=first>Date.now();
+      return `<article class="ps"><div class="hd"><h3>${esc(sl.name)}</h3><span class="st ${r.status}">${lbl[r.status]}</span></div>
+      <span class="note">Giocata il ${new Date(sl.at).toLocaleDateString('it-IT',{day:'numeric',month:'long'})} alle ${new Date(sl.at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}${sl.edited?' · modificata':''}</span>
+      ${sl.picks.map(p=>`<div class="pk"><span class="o ${p.res?(p.res.sign===p.k?'w':'l'):''}">${p.res?(p.res.sign===p.k?'✓':'✗'):'·'}</span><span>${esc(p.m)}: <b>${LBL[p.k]}</b></span><span class="num">${p.q.toFixed(2)}</span><small>${fmtW(new Date(p.d))}${p.res?' · finita '+p.res.score:''}</small></div>`).join('')}
+      ${line('Colonne',sl.combos)}${line('Importo per colonna',eur2(sl.stake))}${line('Costo',eur2(sl.cost))}${line('Vincita massima',eur2(sl.max))}
+      ${r.status==='won'?line('Hai vinto','<b>'+eur2(r.paid)+'</b>'):''}${r.status==='lock'||(r.status==='wait'&&r.won)?line('Indovinate finora',r.won+' su '+sl.picks.length):''}
+      <div class="acts">${canEdit?`<button data-edit="${sl.id}">Modifica</button><button data-del="${sl.id}">Elimina</button>`:''}</div>
+      ${canEdit?`<span class="note">Puoi modificarla fino alle ${first.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})} di ${first.toLocaleDateString('it-IT',{weekday:'long',day:'numeric'})}, quando inizia la prima partita.</span>`:`<span class="note">Bloccata: la prima partita è iniziata, la schedina non si può più modificare.</span>`}
+      </article>`}).join('')}</div>
+    <p class="hint-sel">I risultati si aggiornano da soli quando le partite finiscono. Una partita viene controllata solo se il suo campionato è caricato: scegli Tutti in alto per controllarle tutte.</p>`
+    :`<p class="empty">Nessuna schedina giocata. Scegli le partite, apri Nuova schedina e premi Conferma su una delle giocate.</p>`}
+$('#gview').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.gview=b.dataset.v;renderGioc()});
+$('#gCards').addEventListener('click',e=>{const b=e.target.closest('.confirm');if(!b||b.disabled)return;const g=state.gList[+b.dataset.i];if(!g)return;
+  const ok=state.gOk;if(ok.some(x=>x.d.getTime()<=Date.now())){renderGioc();return}
+  const pl=ls.get('played',[]);const slip={id:state.editId||String(Date.now()),at:Date.now(),name:g.name,ks:g.ks,stake:state.gStakeV,combos:g.combos,cost:g.cost,max:g.max,
+    picks:ok.map(x=>({key:x.key,k:x.k,m:x.m,lg:x.lg,d:x.d.toISOString(),q:x.q,p:x.p}))};
+  const i=pl.findIndex(x=>x.id===slip.id);
+  if(i>=0){const old=pl[i];if(new Date(Math.min(...old.picks.map(p=>+new Date(p.d))))<=Date.now()){state.editId=null;renderGioc();return}slip.at=old.at;slip.edited=true;pl[i]=slip}else pl.push(slip);
+  ls.set('played',pl);state.sel={};state.editId=null;state.gview='played';render();renderGioc()});
+$('#gPlayed').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const pl=ls.get('played',[]);
+  if(b.dataset.edit){const sl=pl.find(x=>x.id===b.dataset.edit);if(!sl)return;
+    if(new Date(Math.min(...sl.picks.map(p=>+new Date(p.d))))<=Date.now()){renderGioc();return}
+    state.sel={};for(const p of sl.picks)state.sel[p.key]={k:p.k,m:p.m,lg:p.lg,d:p.d,p:p.p,q:p.q};
+    ls.set('gStake',sl.stake);state.editId=sl.id;state.gview='new';render();renderGioc();document.querySelector('main').scrollTop=0}
+  if(b.dataset.del){if(b.dataset.sure){ls.set('played',pl.filter(x=>x.id!==b.dataset.del));renderGioc()}else{b.dataset.sure='1';b.textContent='Tocca ancora per eliminare'}}});
+$('#editCancel').addEventListener('click',()=>{state.editId=null;state.sel={};render();state.gview='played';renderGioc()});
 
 /* eventi */
 $('#sort').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.sort=b.dataset.v;ls.set('sort',state.sort);render();document.querySelector('main').scrollTop=0});
