@@ -121,7 +121,7 @@ main{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-lef
 
 /* barra schede */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:color-mix(in srgb,var(--card) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);
-  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);display:grid;grid-template-columns:repeat(5,1fr)}
+  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);display:grid;grid-template-columns:repeat(4,1fr)}
 .tabbar button{border:0;background:none;height:var(--tab-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.72rem;font-weight:600;color:var(--muted);cursor:pointer;position:relative}
 .tabbar svg{width:22px;height:22px}
 .tabbar button[aria-current="page"]{color:var(--signal)}
@@ -361,6 +361,10 @@ button.odd:active{transform:scale(.97)}
 .verd{font-weight:600;font-size:.92rem}
 @media (max-width:420px){.stats4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .odd .bk{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bookpick{display:flex;align-items:center;gap:8px;font-size:.84rem;font-weight:600;color:var(--muted);flex:1 1 12em;justify-content:flex-end}
+.bookpick select{font:600 .9rem var(--sans);color:var(--ink);background:var(--glass);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border:1px solid var(--glass-edge);border-radius:999px;padding:8px 12px;max-width:100%;min-width:0}
+body.nolg .leagues{display:none}
+body.nolg .top{gap:0;padding-bottom:12px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -388,8 +392,9 @@ button.odd:active{transform:scale(.97)}
   <section class="view" id="v-partite">
     <div class="countdown" id="cdBox" hidden><small id="cdLabel">Prossima partita</small><span class="mt" id="cdMatch"></span><span class="cd" id="cdTime">--:--:--</span><span class="wh" id="cdWhen"></span></div>
     <div class="status" id="status">Caricamento dati…</div>
-    <p class="hint-sel">Tocca un segno (1, X o 2) per aggiungerlo alle tue giocate. Il calcolo lo trovi in Schedina, alla voce Le mie.</p>
-    <div class="toolbar"><div class="seg sm" id="sort" role="group" aria-label="Ordina partite"><button data-v="time">Per orario</button><button data-v="prob">Più probabili</button></div></div>
+    <p class="hint-sel">Tocca un segno (1, X o 2) per aggiungerlo alle tue giocate. Il calcolo lo trovi in Giocate.</p>
+    <div class="toolbar"><div class="seg sm" id="sort" role="group" aria-label="Ordina partite"><button data-v="time">Per orario</button><button data-v="prob">Più probabili</button></div>
+      <label class="bookpick" for="book"><span>Quote</span><select id="book" aria-label="Centro quote"><option value="best">Quota migliore</option><option value="median">Media dei bookmaker</option></select></label></div>
     <div class="legend" id="legend"><span class="r"><span class="dot g"></span>Verde: il risultato più probabile della partita.</span><span class="r" id="legendRed" hidden><span class="dot"></span>Rosso: giocata con valore, la quota paga più del dovuto. Sotto trovi quanto puntare.</span></div>
     <div id="list" class="view"></div>
   </section>
@@ -406,7 +411,8 @@ button.odd:active{transform:scale(.97)}
     <div class="editbar" id="editBar" hidden><span id="editTxt">Stai modificando una schedina.</span><button class="clear" id="editCancel">Annulla modifica</button></div>
     <div class="ghead"><h2 class="day" style="margin:4px 0 0">Le tue giocate</h2>
       <label class="ctl" for="gStake">Importo per colonna<input id="gStake" type="text" inputmode="decimal" class="num"></label></div>
-    <p class="hint-sel">Scegli le partite toccando un segno in Partite, oppure da Possibili vincitrici in Schedina. Qui vedi tutte le giocate che puoi fare con quelle partite, come sulla ricevuta.</p>
+    <p class="hint-sel">Scegli le partite toccando un segno in Partite, oppure da Possibili vincitrici qui sotto. Qui vedi tutte le giocate che puoi fare con quelle partite, come sulla ricevuta.</p>
+    <div id="sugg"></div>
     <div id="gPicks" class="gpicks"></div>
     <div id="gCards" class="gcards"></div>
     </div>
@@ -415,24 +421,25 @@ button.odd:active{transform:scale(.97)}
   </section>
 
   <section class="view" id="v-schedina" hidden>
-    <div class="controls">
+    <div class="seg" id="tk" role="group" aria-label="Tipo di schedina" style="grid-template-columns:1fr 1fr 1fr"><button data-v="mine">Le mie</button><button data-v="value">Con valore</button><button data-v="prob">Più probabili</button></div>
+    <div class="mine" id="mineCtl" hidden><div class="seg" id="mode" role="group" aria-label="Tipo di giocata"><button data-v="single">Singole</button><button data-v="multi">Multipla</button><button data-v="system">Sistema</button></div></div>
+    <div class="ticket" id="ticket"></div>
+    <button class="clear" id="clearSel" hidden>Svuota le mie giocate</button>
+  </section>
+
+  <section class="view" id="v-imp" hidden>
+    <div class="panel">
+      <h2>Cassa e prudenza</h2>
+      <p>Servono a calcolare la puntata consigliata sulle giocate con valore.</p>
+      <div class="controls">
       <label class="ctl" for="bank">Cassa in €<input id="bank" type="text" inputmode="numeric" class="num"></label>
-      <div class="ctl">Quote da
-        <select id="book" aria-label="Bookmaker"><option value="best">Quota migliore</option><option value="median">Mediana bookmaker</option></select>
-      </div>
       <div class="ctl full">Prudenza
         <div class="seg" id="style" role="group" aria-label="Prudenza">
           <button data-v="p">Prudente</button><button data-v="e">Equilibrato</button><button data-v="a">Aggressivo</button>
         </div>
       </div>
     </div>
-    <div class="seg" id="tk" role="group" aria-label="Tipo di schedina" style="grid-template-columns:1fr 1fr 1fr"><button data-v="mine">Le mie</button><button data-v="value">Con valore</button><button data-v="prob">Più probabili</button></div>
-    <div class="mine" id="mineCtl" hidden><div class="seg" id="mode" role="group" aria-label="Tipo di giocata"><button data-v="single">Singole</button><button data-v="multi">Multipla</button><button data-v="system">Sistema</button></div><div id="sugg"></div></div>
-    <div class="ticket" id="ticket"></div>
-    <button class="clear" id="clearSel" hidden>Svuota le mie giocate</button>
-  </section>
-
-  <section class="view" id="v-imp" hidden>
+    </div>
     <div class="panel">
       <h2>Fonti dati</h2>
       <div class="field">
@@ -467,7 +474,6 @@ button.odd:active{transform:scale(.97)}
   <button data-v="partite" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7l4.3 3.1-1.6 5H9.3l-1.6-5z"/></svg>Partite</button>
   <button data-v="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendario</button>
   <button data-v="gioc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="13" height="15" rx="2"/><path d="M4 7v12a2 2 0 0 0 2 2h10M10.5 8h6M10.5 12h6"/></svg>Giocate<span class="badge" id="badgeG" hidden>0</span></button>
-  <button data-v="schedina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Schedina<span class="badge" id="badge" hidden>0</span></button>
   <button data-v="imp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Impostazioni</button>
 </nav>
 
@@ -490,7 +496,7 @@ const LEAGUES=[
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const $=s=>document.querySelector(s);
 const STYLE={p:{edge:0.08,kf:0.25,name:'Prudente'},e:{edge:0.05,kf:1/3,name:'Equilibrato'},a:{edge:0.03,kf:0.5,name:'Aggressivo'}};
-const state={gview:'new',editId:null,sel:ls.get('sel',{}),mode:ls.get('mode','single'),sort:ls.get('sort','time'),tk:ls.get('tk','value'),league:ls.get('lg','all'),style:ls.get('style','e'),book:ls.get('book','best'),sets:[],cache:{},open:new Set(),view:'partite'};
+const state={tk:'mine',gview:'new',editId:null,sel:ls.get('sel',{}),mode:ls.get('mode','single'),sort:ls.get('sort','time'),league:ls.get('lg','all'),style:ls.get('style','e'),book:ls.get('book','best'),sets:[],cache:{},open:new Set(),view:'partite'};
 if(!STYLE[state.style])state.style='e';
 $('#bank').value=ls.get('bank',1000);$('#kOdds').value=ls.get('kOdds','');$('#kFd').value=ls.get('kFd','');
 
@@ -653,7 +659,7 @@ async function load(force){
   if(!sets.length){$('#status').innerHTML='<span class="warn">Non riesco a scaricare i risultati. Controlla la connessione e tocca Aggiorna.</span>';$('#list').innerHTML='';return}
   state.sets=sets;setTimeout(()=>window.__dataReady&&window.__dataReady(),0);
   const books=new Map();sets.forEach(x=>x.books.forEach((t,k)=>books.set(k,t)));
-  $('#book').innerHTML='<option value="best">Quota migliore</option><option value="median">Mediana bookmaker</option>'+[...books].sort((a,b)=>a[1].localeCompare(b[1])).map(([k,t])=>`<option value="${esc(k)}">${esc(t)}</option>`).join('');
+  $('#book').innerHTML='<option value="best">Quota migliore</option><option value="median">Media dei bookmaker</option>'+[...books].sort((a,b)=>a[1].localeCompare(b[1])).map(([k,t])=>`<option value="${esc(k)}">${esc(t)}</option>`).join('');
   if(state.book!=='best'&&state.book!=='median'&&!books.has(state.book))state.book='best';$('#book').value=state.book;
   const last=sets.map(x=>x.base.lastDate).filter(Boolean).sort((a,b)=>a-b)[0];
   const age=last?Math.round((now-last)/864e5):0;
@@ -821,11 +827,10 @@ function render(){
   $('#legendRed').hidden=!picks.length;
   document.querySelectorAll('#sort button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.sort));
   document.querySelectorAll('#tk button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.tk));
-  document.querySelector('.controls').hidden=false;
+  
   $('#mineCtl').hidden=state.tk!=='mine';$('#clearSel').hidden=state.tk!=='mine'||!mine.length;
   document.querySelectorAll('#mode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.mode));
-  const n=mine.length||picks.length;const b=$('#badge');b.textContent=n;b.hidden=!n;
-  const bg=$('#badgeG');bg.textContent=mine.length;bg.hidden=!mine.length;if(state.view==='gioc')renderGioc()}
+    const bg=$('#badgeG');bg.textContent=mine.length;bg.hidden=!mine.length;if(state.view==='gioc')renderGioc()}
 
 /* calendario */
 const dk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -907,7 +912,7 @@ $('#gPicks').addEventListener('click',e=>{const b=e.target.closest('.x');if(!b)r
 const splitM=m=>{const i=m.indexOf(' – ');return i<0?[m,'']:[m.slice(0,i),m.slice(i+3)]};
 function outcomeOf(pk){
   if(pk.res)return pk.res;
-  const set=state.sets.find(x=>x.L.name===pk.lg);if(!set)return null;
+  const set=(state.allSets||state.sets).find(x=>x.L.name===pk.lg)||state.sets.find(x=>x.L.name===pk.lg);if(!set)return null;
   const [h,a]=splitM(pk.m),d=new Date(pk.d);
   for(const r of set.base.res){if(Math.abs(r.d-d)>36*3600e3)continue;
     const rh=show(r.h),ra=show(r.a);
@@ -924,7 +929,9 @@ function settle(sl){let changed=false;
   else if(sl.picks.length-lost.length<kmin)status='lost';
   else if(new Date(Math.min(...sl.picks.map(p=>+new Date(p.d))))<=Date.now())status='lock';
   return {status,paid:status==='lost'?0:paid,won:won.length,lost:lost.length,pend,changed}}
-function renderPlayed(){
+async function ensureAll(){if(state.allSets||state.loadingAll)return;state.loadingAll=true;const out=[];
+  for(const L of LEAGUES){try{out.push(await loadLeague(L))}catch(e){}}state.allSets=out;state.loadingAll=false;if(state.view==='gioc')renderGioc()}
+function renderPlayed(){ensureAll();
   const pl=ls.get('played',[]);let dirty=false;
   const rows=pl.map(sl=>{const r=settle(sl);if(r.changed)dirty=true;return {sl,r}});
   if(dirty)ls.set('played',pl);
@@ -942,7 +949,7 @@ function renderPlayed(){
       <div class="acts">${canEdit?`<button data-edit="${sl.id}">Modifica</button><button data-del="${sl.id}">Elimina</button>`:''}</div>
       ${canEdit?`<span class="note">Puoi modificarla fino alle ${first.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})} di ${first.toLocaleDateString('it-IT',{weekday:'long',day:'numeric'})}, quando inizia la prima partita.</span>`:`<span class="note">Bloccata: la prima partita è iniziata, la schedina non si può più modificare.</span>`}
       </article>`}).join('')}</div>
-    <p class="hint-sel">I risultati si aggiornano da soli quando le partite finiscono. Una partita viene controllata solo se il suo campionato è caricato: scegli Tutti in alto per controllarle tutte.</p>`
+    <p class="hint-sel">I risultati si aggiornano da soli quando le partite finiscono.</p>`
     :`<p class="empty">Nessuna schedina giocata. Scegli le partite, apri Nuova schedina e premi Conferma su una delle giocate.</p>`}
 $('#gview').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.gview=b.dataset.v;renderGioc()});
 $('#gCards').addEventListener('click',e=>{const b=e.target.closest('.confirm');if(!b||b.disabled)return;const g=state.gList[+b.dataset.i];if(!g)return;
@@ -961,7 +968,7 @@ $('#gPlayed').addEventListener('click',e=>{const b=e.target.closest('button');if
 $('#editCancel').addEventListener('click',()=>{state.editId=null;state.sel={};render();state.gview='played';renderGioc()});
 
 /* statistiche personali: quanto indovini, rispetto a quanto l'app si aspettava */
-function renderStats(){
+function renderStats(){ensureAll();
   const pl=ls.get('played',[]);let dirty=false;
   const rows=pl.map(sl=>{const r=settle(sl);if(r.changed)dirty=true;return {sl,r}});if(dirty)ls.set('played',pl);
   const seen=new Map();for(const {sl} of rows)for(const p of sl.picks){if(!p.res)continue;const id=p.key+'|'+p.k;if(!seen.has(id))seen.set(id,{...p,type:sl.name})}
@@ -992,18 +999,18 @@ function renderStats(){
     ${brk('Per quota',group(band,['Sotto 1,60','1,60 – 2,50','2,50 – 4,00','Sopra 4,00']))}
     ${brk('Per campionato',group(p=>p.lg))}
     ${brk('Per tipo di schedina',group(p=>p.type.startsWith('SISTEMA')?'Sistema':p.type.charAt(0)+p.type.slice(1).toLowerCase()))}
-    <p class="hint-sel">Ogni partita conta una volta sola, anche se è in più schedine. I risultati si aggiornano quando il campionato è caricato: tieni Tutti selezionato in alto.</p>`}
+    <p class="hint-sel">Ogni partita conta una volta sola, anche se è in più schedine.</p>`}
 
 /* eventi */
 $('#sort').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.sort=b.dataset.v;ls.set('sort',state.sort);render();document.querySelector('main').scrollTop=0});
 $('#tk').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.tk=b.dataset.v;ls.set('tk',state.tk);render()});
 function leagues(){$('#leagues').innerHTML=[{id:'all',name:'Tutti'},...LEAGUES].map(L=>`<button class="lg-btn" aria-pressed="${L.id===state.league}" data-id="${L.id}">${L.name}</button>`).join('')}
 $('#leagues').addEventListener('click',e=>{const b=e.target.closest('.lg-btn');if(!b||b.dataset.id===state.league)return;state.league=b.dataset.id;ls.set('lg',state.league);leagues();load()});
-$('#refresh').addEventListener('click',()=>{state.cache={};load(true)});
+$('#refresh').addEventListener('click',()=>{state.cache={};state.allSets=null;load(true)});
 $('#tabbar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.view=b.dataset.v;
   document.querySelectorAll('#tabbar button').forEach(x=>x.toggleAttribute('aria-current',x===b));
   document.querySelectorAll('#tabbar button[aria-current]').forEach(x=>x.setAttribute('aria-current','page'));
-  ['partite','cal','gioc','schedina','imp'].forEach(v=>$('#v-'+v).hidden=v!==state.view);if(state.view==='cal')renderCal();if(state.view==='gioc')renderGioc();document.querySelector('main').scrollTop=0});
+  ['partite','cal','gioc','imp'].forEach(v=>$('#v-'+v).hidden=v!==state.view);document.body.classList.toggle('nolg',state.view==='gioc');if(state.view==='cal')renderCal();if(state.view==='gioc')renderGioc();document.querySelector('main').scrollTop=0});
 $('#list').addEventListener('click',e=>{const o=e.target.closest('button.odd');if(!o)return;const key=o.closest('.match').dataset.key,k=o.dataset.k;
   if(state.sel[key]&&state.sel[key].k===k)delete state.sel[key];else state.sel[key]={k,d:new Date().toISOString()};
   const sc=document.querySelector('main').scrollTop;render();document.querySelector('main').scrollTop=sc});
