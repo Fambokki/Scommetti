@@ -341,6 +341,24 @@ button.odd:active{transform:scale(.97)}
 .ps .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .ps .acts button{border:1px solid color-mix(in srgb,currentColor 40%,transparent);background:transparent;color:inherit;font:700 .82rem var(--sans);border-radius:999px;padding:7px 14px;cursor:pointer}
 .ps .note{font-size:.76rem;opacity:.75}
+.sbox{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:20px;background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-hi);margin-bottom:12px}
+.sbox h3{margin:0;font-weight:800;font-stretch:80%;font-size:1.1rem}
+.sbox p{margin:0;font-size:.86rem;color:var(--muted)}
+.hero2{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:center}
+.hero2 b{font-weight:800;font-stretch:70%;font-size:3rem;line-height:1;font-variant-numeric:tabular-nums}
+.hero2 span{font-size:.9rem}
+.meter2{position:relative;height:10px;border-radius:5px;background:var(--fill);overflow:visible}
+.meter2 i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--fav)}
+.meter2 u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);text-decoration:none}
+.brk{display:flex;flex-direction:column;gap:8px}
+.brk .r{display:grid;grid-template-columns:minmax(0,7.5em) 1fr auto;gap:10px;align-items:center;font-size:.86rem}
+.brk .r .n{color:var(--muted);font-size:.78rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.brk .bar2{position:relative;height:8px;border-radius:4px;background:var(--fill)}
+.brk .bar2 i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--fav)}
+.brk .bar2 u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.trend{display:flex;align-items:flex-end;gap:3px;height:70px}
+.trend i{flex:1;min-width:3px;border-radius:2px 2px 0 0}
+.verd{font-weight:600;font-size:.92rem}
 @media (max-width:420px){.stats4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .odd .bk{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -383,7 +401,7 @@ button.odd:active{transform:scale(.97)}
   </section>
 
   <section class="view" id="v-gioc" hidden>
-    <div class="seg" id="gview" role="group" aria-label="Sezione" style="grid-template-columns:1fr 1fr"><button data-v="new">Nuova schedina</button><button data-v="played">Schedine giocate</button></div>
+    <div class="seg" id="gview" role="group" aria-label="Sezione" style="grid-template-columns:1fr 1fr 1fr"><button data-v="new">Nuova</button><button data-v="played">Giocate</button><button data-v="stats">Statistiche</button></div>
     <div id="gNew">
     <div class="editbar" id="editBar" hidden><span id="editTxt">Stai modificando una schedina.</span><button class="clear" id="editCancel">Annulla modifica</button></div>
     <div class="ghead"><h2 class="day" style="margin:4px 0 0">Le tue giocate</h2>
@@ -393,6 +411,7 @@ button.odd:active{transform:scale(.97)}
     <div id="gCards" class="gcards"></div>
     </div>
     <div id="gPlayed" hidden></div>
+    <div id="gStats" hidden></div>
   </section>
 
   <section class="view" id="v-schedina" hidden>
@@ -839,9 +858,10 @@ $('#calToday').addEventListener('click',()=>{state.calDay=dk(new Date());renderC
 /* giocate: tutte le schedine possibili con le partite scelte */
 function renderGioc(){
   document.querySelectorAll('#gview button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.gview));
-  $('#gNew').hidden=state.gview!=='new';$('#gPlayed').hidden=state.gview!=='played';
-  const pl=ls.get('played',[]);$('#gview button[data-v=played]').textContent='Schedine giocate'+(pl.length?' ('+pl.length+')':'');
+  $('#gNew').hidden=state.gview!=='new';$('#gPlayed').hidden=state.gview!=='played';$('#gStats').hidden=state.gview!=='stats';
+  const pl=ls.get('played',[]);$('#gview button[data-v=played]').textContent='Giocate'+(pl.length?' ('+pl.length+')':'');
   if(state.gview==='played'){renderPlayed();return}
+  if(state.gview==='stats'){renderStats();return}
   const ed=state.editId&&pl.find(x=>x.id===state.editId);$('#editBar').hidden=!ed;
   if(ed)$('#editTxt').textContent='Stai modificando la schedina '+ed.name.toLowerCase()+' del '+new Date(ed.at).toLocaleDateString('it-IT',{day:'numeric',month:'short'})+'.';
   const st=ls.get('gStake',1);$('#gStake').value=String(st).replace('.',',');
@@ -939,6 +959,40 @@ $('#gPlayed').addEventListener('click',e=>{const b=e.target.closest('button');if
     ls.set('gStake',sl.stake);state.editId=sl.id;state.gview='new';render();renderGioc();document.querySelector('main').scrollTop=0}
   if(b.dataset.del){if(b.dataset.sure){ls.set('played',pl.filter(x=>x.id!==b.dataset.del));renderGioc()}else{b.dataset.sure='1';b.textContent='Tocca ancora per eliminare'}}});
 $('#editCancel').addEventListener('click',()=>{state.editId=null;state.sel={};render();state.gview='played';renderGioc()});
+
+/* statistiche personali: quanto indovini, rispetto a quanto l'app si aspettava */
+function renderStats(){
+  const pl=ls.get('played',[]);let dirty=false;
+  const rows=pl.map(sl=>{const r=settle(sl);if(r.changed)dirty=true;return {sl,r}});if(dirty)ls.set('played',pl);
+  const seen=new Map();for(const {sl} of rows)for(const p of sl.picks){if(!p.res)continue;const id=p.key+'|'+p.k;if(!seen.has(id))seen.set(id,{...p,type:sl.name})}
+  const picks=[...seen.values()],n=picks.length,hit=picks.filter(p=>p.res.sign===p.k).length,exp=picks.reduce((a,p)=>a+(p.p||0),0);
+  if(!n){$('#gStats').innerHTML=`<p class="empty">Le statistiche compaiono quando finiscono le partite delle tue schedine. Gioca qualche schedina e torna qui dopo la giornata.</p>`;return}
+  const closed=rows.filter(x=>x.r.status==='won'||x.r.status==='lost'),wonS=closed.filter(x=>x.r.status==='won');
+  const spent=closed.reduce((a,x)=>a+x.sl.cost,0),cashed=wonS.reduce((a,x)=>a+x.r.paid,0),roi=spent?(cashed-spent)/spent:0;
+  const rate=hit/n,expRate=exp/n,diff=hit-exp,sd=Math.sqrt(picks.reduce((a,p)=>a+(p.p||0)*(1-(p.p||0)),0));
+  const z=sd>0?diff/sd:0;
+  const verdict=n<20?`Con ${n} pronostici chiusi è presto per giudicare: servono almeno 20-30 partite.`
+    :z>1.5?`Stai indovinando più di quanto l'app si aspettava: ${hit} contro ${exp.toFixed(1).replace('.',',')} attesi. Le tue scelte aggiungono qualcosa alle percentuali.`
+    :z<-1.5?`Stai indovinando meno di quanto l'app si aspettava: ${hit} contro ${exp.toFixed(1).replace('.',',')} attesi. Prova a seguire di più i segni consigliati.`
+    :`Stai indovinando in linea con le attese: ${hit} contro ${exp.toFixed(1).replace('.',',')} previsti. La differenza è dentro la normale fortuna.`;
+  const group=(key,order)=>{const g={};for(const p of picks){const k=key(p);(g[k]=g[k]||{n:0,h:0,e:0}).n++;g[k].h+=p.res.sign===p.k?1:0;g[k].e+=p.p||0}
+    return (order||Object.keys(g)).filter(k=>g[k]).map(k=>({k,...g[k]}))};
+  const band=p=>p.q<1.6?'Sotto 1,60':p.q<2.5?'1,60 – 2,50':p.q<4?'2,50 – 4,00':'Sopra 4,00';
+  const brk=(title,list)=>`<div class="sbox"><h3>${title}</h3><div class="brk">${list.map(x=>`<div class="r"><span>${esc(x.k)}</span><span class="bar2"><i style="width:${(x.h/x.n*100).toFixed(1)}%"></i><u style="left:calc(${(x.e/x.n*100).toFixed(1)}% - 1px)" title="Atteso"></u></span><span class="n">${pct(x.h/x.n)} · ${x.h}/${x.n}</span></div>`).join('')}</div><p>Barra verde: quanti ne hai indovinati. Trattino: quanti l'app se ne aspettava.</p></div>`;
+  let cum=0;const tr=closed.slice().sort((a,b)=>Math.max(...a.sl.picks.map(p=>+new Date(p.d)))-Math.max(...b.sl.picks.map(p=>+new Date(p.d)))).map(x=>{cum+=(x.r.status==='won'?x.r.paid:0)-x.sl.cost;return cum});
+  const mx=Math.max(1,...tr.map(Math.abs));
+  $('#gStats').innerHTML=`<div class="sbox"><h3>I tuoi pronostici</h3>
+      <div class="hero2"><b>${pct(rate)}</b><span>dei segni indovinati: ${hit} su ${n} partite finite.</span></div>
+      <div class="meter2"><i style="width:${(rate*100).toFixed(1)}%"></i><u style="left:calc(${(expRate*100).toFixed(1)}% - 1px)"></u></div>
+      <p>Il trattino è la percentuale che l'app si aspettava per i segni che hai scelto (${pct(expRate)}).</p>
+      <p class="verd">${verdict}</p></div>
+    <div class="stats4"><div><small>Schedine chiuse</small><b>${closed.length}</b></div><div><small>Schedine vinte</small><b>${closed.length?pct(wonS.length/closed.length):'–'}</b></div><div><small>Resa</small><b style="color:${roi>=0?'var(--fav)':'var(--signal)'}">${closed.length?(roi>=0?'+':'−')+pct(Math.abs(roi)):'–'}</b></div><div><small>Bilancio</small><b style="color:${cashed-spent>=0?'var(--fav)':'var(--signal)'}">${cashed-spent>=0?'+':'−'}${eur2(Math.abs(cashed-spent))}</b></div></div>
+    ${tr.length>1?`<div class="sbox"><h3>Andamento del bilancio</h3><div class="trend">${tr.map(v=>`<i style="height:${Math.max(3,Math.abs(v)/mx*70)}px;background:${v>=0?'var(--fav)':'var(--signal)'}" title="${(v>=0?'+':'−')+eur2(Math.abs(v))}"></i>`).join('')}</div><p>Una barra per schedina chiusa, in ordine di data. Ultimo valore: ${(tr[tr.length-1]>=0?'+':'−')+eur2(Math.abs(tr[tr.length-1]))}.</p></div>`:''}
+    ${brk('Per segno',group(p=>p.k==='X'?'Pareggio (X)':p.k==='1'?'Casa (1)':'Ospite (2)',['Casa (1)','Pareggio (X)','Ospite (2)']))}
+    ${brk('Per quota',group(band,['Sotto 1,60','1,60 – 2,50','2,50 – 4,00','Sopra 4,00']))}
+    ${brk('Per campionato',group(p=>p.lg))}
+    ${brk('Per tipo di schedina',group(p=>p.type.startsWith('SISTEMA')?'Sistema':p.type.charAt(0)+p.type.slice(1).toLowerCase()))}
+    <p class="hint-sel">Ogni partita conta una volta sola, anche se è in più schedine. I risultati si aggiornano quando il campionato è caricato: tieni Tutti selezionato in alto.</p>`}
 
 /* eventi */
 $('#sort').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.sort=b.dataset.v;ls.set('sort',state.sort);render();document.querySelector('main').scrollTop=0});
