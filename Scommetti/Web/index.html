@@ -515,14 +515,18 @@ function matchTeam(name,teams){const a=norm(name);let best=null,bs=0;
 /* rete: nell'app iOS passa dal ponte nativo, nel browser usa fetch */
 const ERR={401:'chiave non valida',403:'chiave non abilitata',404:'dati non trovati',422:'richiesta non accettata',429:'richieste esaurite per ora',500:'servizio non disponibile',503:'servizio non disponibile'};
 const httpErr=c=>new Error(ERR[c]||('errore '+c));
+/* versione web (Netlify): le richieste ai servizi passano dal sito stesso, così il browser non le blocca */
+const PROXY=(document.querySelector('meta[name="scommetti-proxy"]')||{}).content||'';
+const PMAP={'api.football-data.org':'fd','api.clubelo.com':'elo','api.the-odds-api.com':'odds'};
+function viaProxy(url){if(!PROXY)return url;try{const u=new URL(url);const k=PMAP[u.hostname];return k?PROXY+'/'+k+u.pathname+u.search:url}catch(e){return url}}
 async function getText(url){
   const nat=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.net;
   if(nat){const r=await nat.postMessage({url,headers:{}});if(r.status<200||r.status>=300)throw httpErr(r.status);return r.body}
-  const r=await fetch(url);if(!r.ok)throw httpErr(r.status);return r.text()}
+  const r=await fetch(viaProxy(url));if(!r.ok)throw httpErr(r.status);return r.text()}
 async function getJSON(url,opt){
   const nat=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.net;
   if(nat){const r=await nat.postMessage({url,headers:(opt&&opt.headers)||{}});if(r.status<200||r.status>=300)throw httpErr(r.status);return JSON.parse(r.body)}
-  const r=await fetch(url,opt);if(!r.ok)throw httpErr(r.status);return r.json()}
+  const r=await fetch(viaProxy(url),opt);if(!r.ok)throw httpErr(r.status);return r.json()}
 async function loadOpenfootball(L){
   const res=[],fix=[];let lastDate=null,missing=0;
   for(const y of [curStart-1,curStart]){let d;try{d=await getJSON(`https://raw.githubusercontent.com/openfootball/football.json/master/${sName(y)}/${L.of}.json`)}catch(e){continue}
@@ -1041,7 +1045,7 @@ const iconNat=window.webkit&&window.webkit.messageHandlers&&window.webkit.messag
 let curIcon='default';
 function drawIcons(){$('#icons').innerHTML=ICONS.map(([id,n])=>`<button class="ico" role="radio" aria-checked="${id===curIcon}" data-id="${id}"><img src="icons/${id==='default'?'default':id.replace('AppIcon-','').toLowerCase()}.png" alt="">${n}</button>`).join('')}
 $('#icons').addEventListener('click',async e=>{const b=e.target.closest('.ico');if(!b)return;
-  if(!iconNat){$('#iconMsg').textContent="Il cambio icona funziona nell'app installata sul telefono.";return}
+  if(!iconNat){$('#iconMsg').textContent="Il cambio icona funziona solo nell'app installata (iPhone o Android), non nel browser.";return}
   try{curIcon=await iconNat.postMessage({set:b.dataset.id});drawIcons();$('#iconMsg').textContent='Icona cambiata.'}catch(err){$('#iconMsg').textContent='Non è stato possibile cambiare icona: '+(err&&err.message||err)}});
 if(iconNat)iconNat.postMessage({}).then(v=>{curIcon=v||'default';drawIcons()}).catch(()=>{});
 drawIcons();

@@ -1,0 +1,33 @@
+# Versione web di Scommetti (si aggiorna da sola a ogni modifica del repository)
+[build]
+  command = "bash web/build.sh"
+  publish = "dist"
+
+# Le richieste ai servizi passano dal sito: il browser non le blocca e la chiave resta nell'intestazione
+[[redirects]]
+  from = "/api/fd/*"
+  to = "https://api.football-data.org/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/odds/*"
+  to = "https://api.the-odds-api.com/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/elo/*"
+  to = "http://api.clubelo.com/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
